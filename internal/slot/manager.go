@@ -152,6 +152,90 @@ func (m *Manager) Clear(slotName string, opts ClearOptions) error {
 	return m.wt.Remove(slot.Path, opts.Force)
 }
 
+func (m *Manager) Swap(slotNameA, slotNameB string) error {
+	slotA, err := m.resolveSlot(slotNameA)
+	if err != nil {
+		return err
+	}
+	slotB, err := m.resolveSlot(slotNameB)
+	if err != nil {
+		return err
+	}
+
+	if slotA.State == SlotEmpty || slotB.State == SlotEmpty {
+		return ErrSwapRequiresBoth
+	}
+
+	tempPath := filepath.Join(m.basePath, ".swap-temp")
+	if err := m.wt.Move(slotA.Path, tempPath); err != nil {
+		return err
+	}
+	if err := m.wt.Move(slotB.Path, slotA.Path); err != nil {
+		return err
+	}
+	return m.wt.Move(tempPath, slotB.Path)
+}
+
+type SlotStatus struct {
+	Slot
+	CommitSubject string
+	Changes       []string
+}
+
+func (m *Manager) Status(slotName string) (*SlotStatus, error) {
+	slot, err := m.resolveSlot(slotName)
+	if err != nil {
+		return nil, err
+	}
+
+	st := &SlotStatus{Slot: *slot}
+	if slot.State == SlotEmpty {
+		return st, nil
+	}
+
+	subject, err := m.wt.CommitSubject(slot.Path)
+	if err != nil {
+		return nil, err
+	}
+	st.CommitSubject = subject
+
+	changes, err := m.wt.StatusShort(slot.Path)
+	if err != nil {
+		return nil, err
+	}
+	st.Changes = changes
+
+	return st, nil
+}
+
+func (m *Manager) StatusAll() ([]SlotStatus, error) {
+	slots, err := m.List()
+	if err != nil {
+		return nil, err
+	}
+
+	statuses := make([]SlotStatus, 0, len(slots))
+	for _, s := range slots {
+		st := SlotStatus{Slot: s}
+		if s.State == SlotActive {
+			subject, err := m.wt.CommitSubject(s.Path)
+			if err != nil {
+				return nil, err
+			}
+			st.CommitSubject = subject
+
+			changes, err := m.wt.StatusShort(s.Path)
+			if err != nil {
+				return nil, err
+			}
+			st.Changes = changes
+		}
+		statuses = append(statuses, st)
+	}
+
+	return statuses, nil
+}
+
 func (m *Manager) findSlotDef(name string) bool {
 	for _, def := range m.cfg.Slots {
 		if def.Name == name {

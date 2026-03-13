@@ -11,12 +11,15 @@ import (
 )
 
 type mockWorktree struct {
-	listFn         func() ([]git.WorktreeInfo, error)
-	addFn          func(path, branch string) error
-	addNewBranchFn func(path, newBranch string) error
-	removeFn       func(path string, force bool) error
-	branchExistsFn func(branch string) (bool, error)
-	isDirtyFn      func(path string) (bool, error)
+	listFn          func() ([]git.WorktreeInfo, error)
+	addFn           func(path, branch string) error
+	addNewBranchFn  func(path, newBranch string) error
+	removeFn        func(path string, force bool) error
+	moveFn          func(oldPath, newPath string) error
+	branchExistsFn  func(branch string) (bool, error)
+	isDirtyFn       func(path string) (bool, error)
+	commitSubjectFn func(path string) (string, error)
+	statusShortFn   func(path string) ([]string, error)
 }
 
 func (m *mockWorktree) List() ([]git.WorktreeInfo, error) { return m.listFn() }
@@ -25,8 +28,15 @@ func (m *mockWorktree) AddNewBranch(path, newBranch string) error {
 	return m.addNewBranchFn(path, newBranch)
 }
 func (m *mockWorktree) Remove(path string, force bool) error     { return m.removeFn(path, force) }
+func (m *mockWorktree) Move(oldPath, newPath string) error       { return m.moveFn(oldPath, newPath) }
 func (m *mockWorktree) BranchExists(branch string) (bool, error) { return m.branchExistsFn(branch) }
 func (m *mockWorktree) IsDirty(path string) (bool, error)        { return m.isDirtyFn(path) }
+func (m *mockWorktree) CommitSubject(path string) (string, error) {
+	return m.commitSubjectFn(path)
+}
+func (m *mockWorktree) StatusShort(path string) ([]string, error) {
+	return m.statusShortFn(path)
+}
 
 var _ git.Worktree = (*mockWorktree)(nil)
 
@@ -548,4 +558,207 @@ func TestClear_RemoveFails(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "remove failed")
+}
+
+// --- Swap tests ---
+
+func TestSwap_BothActive(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
+	}
+	var moveCalls []struct{ old, new string }
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/a"},
+				{Path: "/base/slots/hotfix", Branch: "fix/b"},
+			}, nil
+		},
+		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		moveFn: func(oldPath, newPath string) error {
+			moveCalls = append(moveCalls, struct{ old, new string }{oldPath, newPath})
+			return nil
+		},
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Swap("work", "hotfix")
+
+	require.NoError(t, err)
+	require.Len(t, moveCalls, 3)
+	assert.Equal(t, "/base/slots/work", moveCalls[0].old)
+	assert.Equal(t, "/base/slots/.swap-temp", moveCalls[0].new)
+	assert.Equal(t, "/base/slots/hotfix", moveCalls[1].old)
+	assert.Equal(t, "/base/slots/work", moveCalls[1].new)
+	assert.Equal(t, "/base/slots/.swap-temp", moveCalls[2].old)
+	assert.Equal(t, "/base/slots/hotfix", moveCalls[2].new)
+}
+
+func TestSwap_OneEmpty(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/a"},
+			}, nil
+		},
+		isDirtyFn: func(path string) (bool, error) { return false, nil },
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Swap("work", "hotfix")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrSwapRequiresBoth)
+}
+
+func TestSwap_BothEmpty(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Swap("work", "hotfix")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrSwapRequiresBoth)
+}
+
+func TestSwap_UnknownSlot(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/a"},
+			}, nil
+		},
+		isDirtyFn: func(path string) (bool, error) { return false, nil },
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Swap("work", "nope")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrSlotUnknown)
+}
+
+func TestSwap_MoveFails(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/a"},
+				{Path: "/base/slots/hotfix", Branch: "fix/b"},
+			}, nil
+		},
+		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		moveFn: func(oldPath, newPath string) error {
+			return errors.New("move failed")
+		},
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Swap("work", "hotfix")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "move failed")
+}
+
+// --- Status tests ---
+
+func TestStatus_ActiveSlot(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+			}, nil
+		},
+		isDirtyFn:       func(path string) (bool, error) { return true, nil },
+		commitSubjectFn: func(path string) (string, error) { return "add feature X", nil },
+		statusShortFn: func(path string) ([]string, error) {
+			return []string{" M file.go", "?? new.txt"}, nil
+		},
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	st, err := mgr.Status("work")
+
+	require.NoError(t, err)
+	assert.Equal(t, "work", st.Name)
+	assert.Equal(t, SlotActive, st.State)
+	assert.Equal(t, "feature/x", st.Branch)
+	assert.Equal(t, "add feature X", st.CommitSubject)
+	assert.Equal(t, []string{" M file.go", "?? new.txt"}, st.Changes)
+}
+
+func TestStatus_EmptySlot(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	st, err := mgr.Status("work")
+
+	require.NoError(t, err)
+	assert.Equal(t, SlotEmpty, st.State)
+	assert.Empty(t, st.CommitSubject)
+	assert.Nil(t, st.Changes)
+}
+
+func TestStatus_UnknownSlot(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	_, err := mgr.Status("nope")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrSlotUnknown)
+}
+
+func TestStatusAll(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+			}, nil
+		},
+		isDirtyFn:       func(path string) (bool, error) { return false, nil },
+		commitSubjectFn: func(path string) (string, error) { return "initial commit", nil },
+		statusShortFn:   func(path string) ([]string, error) { return nil, nil },
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	statuses, err := mgr.StatusAll()
+
+	require.NoError(t, err)
+	require.Len(t, statuses, 2)
+
+	assert.Equal(t, "work", statuses[0].Name)
+	assert.Equal(t, SlotActive, statuses[0].State)
+	assert.Equal(t, "initial commit", statuses[0].CommitSubject)
+
+	assert.Equal(t, "hotfix", statuses[1].Name)
+	assert.Equal(t, SlotEmpty, statuses[1].State)
+	assert.Empty(t, statuses[1].CommitSubject)
 }

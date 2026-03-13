@@ -10,6 +10,7 @@ var (
 	ErrSlotAlreadyEmpty = errors.New("slot is already empty")
 	ErrSlotDirty        = errors.New("slot has uncommitted changes")
 	ErrSlotEmpty        = errors.New("slot is empty")
+	ErrSwapRequiresBoth = errors.New("swap requires both slots to have branches loaded")
 	ErrBranchNotFound   = errors.New("branch not found")
 	ErrBranchInUse      = errors.New("branch is already in use")
 	ErrBranchExists     = errors.New("branch already exists")
