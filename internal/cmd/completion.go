@@ -88,10 +88,12 @@ func writeShWrapper(w io.Writer) error {
   local result
   result=$(command git-slot "$@" </dev/tty)
   local rc=$?
-  if [ $rc -eq 0 ] && [ -n "$result" ] && [ -d "$result" ]; then
-    cd "$result" || return 1
-  else
-    [ -n "$result" ] && printf "%%s\n" "$result"
+  if [ $rc -eq 0 ]; then
+    if [ -n "$result" ] && [ -d "$result" ]; then
+      cd "$result" || return 1
+    elif [ -n "$result" ]; then
+      printf "%%s\n" "$result"
+    fi
   fi
   return $rc
 }
@@ -103,10 +105,10 @@ func writeFishWrapper(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `function gsl
   set -l result (command git-slot $argv </dev/tty)
   set -l rc $status
-  if test $rc -eq 0; and test -n "$result"; and test -d "$result"
-    cd "$result"
-  else
-    if test -n "$result"
+  if test $rc -eq 0
+    if test -n "$result"; and test -d "$result"
+      cd "$result"
+    else if test -n "$result"
       printf "%%s\n" "$result"
     end
   end

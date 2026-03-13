@@ -4,9 +4,9 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u '+%Y-%m-%d')
 LDFLAGS := -s -w \
-	-X '$(PACKAGE)/internal/cmd.version=$(VERSION)' \
-	-X '$(PACKAGE)/internal/cmd.commit=$(COMMIT)' \
-	-X '$(PACKAGE)/internal/cmd.date=$(DATE)'
+	-X $(PACKAGE)/internal/cmd.version=$(VERSION) \
+	-X $(PACKAGE)/internal/cmd.commit=$(COMMIT) \
+	-X $(PACKAGE)/internal/cmd.date=$(DATE)
 
 .DEFAULT_GOAL := help
 
@@ -14,11 +14,13 @@ LDFLAGS := -s -w \
 
 .PHONY: build
 build: ## Build binary to ./bin/
-	go build -ldflags "$(LDFLAGS)" -o ./bin/$(BINARY_NAME) ./cmd/$(BINARY_NAME)
+	go build -ldflags "$(LDFLAGS)" -o ./bin/$(BINARY_NAME) $(PACKAGE)/cmd/$(BINARY_NAME)
 
 .PHONY: install
-install: ## Install binary to $GOPATH/bin
-	go install -ldflags "$(LDFLAGS)" ./cmd/$(BINARY_NAME)
+install: ## Install binary to $GOBIN or $GOPATH/bin
+	go install -ldflags "$(LDFLAGS)" $(PACKAGE)/cmd/$(BINARY_NAME)
+	@echo "Installed $(BINARY_NAME) to $$(go env GOBIN)"
+	@if [ -z "$$(go env GOBIN)" ]; then echo "Installed to $$(go env GOPATH)/bin"; fi
 
 .PHONY: clean
 clean: ## Remove build artifacts
