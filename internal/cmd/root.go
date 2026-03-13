@@ -11,6 +11,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/hook"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/AquiTCD/git-slot/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -177,33 +178,9 @@ func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
 		return writeJSON(out, jsonSlotList{Slots: items})
 	}
 
-	if len(slots) == 0 {
-		_, _ = fmt.Fprintln(out, "No slots defined.")
-		return nil
-	}
-
-	maxName := 0
-	for _, s := range slots {
-		if len(s.Name) > maxName {
-			maxName = len(s.Name)
-		}
-	}
-
-	for _, s := range slots {
-		_, _ = fmt.Fprintln(out, formatSlotLine(s, maxName))
-	}
+	noColor := !tui.IsTTY(out) || tui.IsNoColor()
+	_, _ = fmt.Fprintln(out, tui.RenderSlotList(slots, noColor))
 	return nil
-}
-
-func formatSlotLine(s slot.Slot, nameWidth int) string {
-	line := fmt.Sprintf("  %-*s  [%s]", nameWidth, s.Name, s.DisplayState())
-	if s.State == slot.SlotActive {
-		line += fmt.Sprintf("  %s  (%s)", s.Branch, s.HeadHash)
-		if s.IsDirty {
-			line += "  *dirty"
-		}
-	}
-	return line
 }
 
 func runClear(a *app, slotName string, out io.Writer) error {
