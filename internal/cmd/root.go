@@ -229,7 +229,7 @@ func runClear(a *app, slotName string, out io.Writer) error {
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_clear hook: %v\n", err)
 	}
 
-	_, _ = fmt.Fprintf(out, "Slot '%s' is now empty.\n", slotName)
+	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is now empty.\n", slotName)
 	return nil
 }
 
@@ -261,7 +261,8 @@ func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writ
 	}
 
 	path, _ := a.mgr.GetPath(slotName)
-	_, _ = fmt.Fprintf(out, "Slot '%s' is ready.\n  Path: %s\n", slotName, path)
+	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is ready.\n", slotName)
+	_, _ = fmt.Fprintln(out, path)
 	return nil
 }
 
@@ -281,7 +282,7 @@ func runSwap(mgr *slot.Manager, swapArgs []string, out io.Writer) error {
 	if err := mgr.Swap(swapArgs[0], swapArgs[1]); err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(out, "Swapped slots '%s' and '%s'.\n", swapArgs[0], swapArgs[1])
+	_, _ = fmt.Fprintf(os.Stderr, "Swapped slots '%s' and '%s'.\n", swapArgs[0], swapArgs[1])
 	return nil
 }
 
@@ -349,7 +350,7 @@ func runInit(out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(out, "Created %s with template configuration.\n", path)
+	_, _ = fmt.Fprintf(os.Stderr, "Created %s with template configuration.\n", path)
 	return nil
 }
 
