@@ -126,6 +126,33 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 - [CLI インターフェース](docs/specs/cli-interface.md)
 - [外部統合](docs/specs/integration.md)
 
+## Development
+
+### 必要環境
+
+- Go 1.26+
+- [golangci-lint](https://golangci-lint.run/) v2
+
+### ビルド・テスト・Lint
+
+```bash
+make build          # ./bin/git-slot にビルド
+make test           # go test -race ./...
+make lint           # golangci-lint run
+make check          # fmt + vet + lint + test を一括実行
+```
+
+### その他のターゲット
+
+```bash
+make install        # $GOPATH/bin にインストール
+make fmt            # gofmt -s -w .
+make vet            # go vet ./...
+make test-coverage  # カバレッジレポート生成
+make clean          # ビルド成果物の削除
+make help           # ターゲット一覧
+```
+
 ## ライセンス
 
 MIT
