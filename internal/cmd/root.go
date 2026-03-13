@@ -45,9 +45,12 @@ Management flags:
   git slot -s, --swap <A> <B>    Swap branches between two slots
   git slot --status [slot]       Show detailed slot status
   git slot --init                Generate a template config file`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	RunE:          run,
+	SilenceUsage:          true,
+	SilenceErrors:         true,
+	Args:                  cobra.ArbitraryArgs,
+	TraverseChildren:      true,
+	DisableFlagsInUseLine: true,
+	RunE:                  run,
 }
 
 func init() {
