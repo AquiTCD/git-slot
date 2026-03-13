@@ -20,6 +20,7 @@ type mockWorktree struct {
 	isDirtyFn       func(path string) (bool, error)
 	commitSubjectFn func(path string) (string, error)
 	statusShortFn   func(path string) ([]string, error)
+	listBranchesFn  func() ([]string, error)
 }
 
 func (m *mockWorktree) List() ([]git.WorktreeInfo, error) { return m.listFn() }
@@ -36,6 +37,12 @@ func (m *mockWorktree) CommitSubject(path string) (string, error) {
 }
 func (m *mockWorktree) StatusShort(path string) ([]string, error) {
 	return m.statusShortFn(path)
+}
+func (m *mockWorktree) ListBranches() ([]string, error) {
+	if m.listBranchesFn != nil {
+		return m.listBranchesFn()
+	}
+	return nil, nil
 }
 
 var _ git.Worktree = (*mockWorktree)(nil)

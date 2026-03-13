@@ -12,6 +12,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
@@ -83,6 +84,13 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 0 && !flagList && flagClear == "" && !cmd.Flags().Changed("swap") && !cmd.Flags().Changed("status") {
+		if tui.IsTTY(cmd.OutOrStdout()) {
+			a, err := bootstrap()
+			if err != nil {
+				return err
+			}
+			return runInteractive(a, cmd.OutOrStdout())
+		}
 		return cmd.Help()
 	}
 	if len(args) > 2 {
@@ -329,6 +337,45 @@ func runInit(out io.Writer) error {
 	}
 	_, _ = fmt.Fprintf(os.Stderr, "Created %s with template configuration.\n", path)
 	return nil
+}
+
+func runInteractive(a *app, out io.Writer) error {
+	slots, err := a.mgr.List()
+	if err != nil {
+		return err
+	}
+	if len(slots) == 0 {
+		_, _ = fmt.Fprintln(out, "No slots defined.")
+		return nil
+	}
+
+	wt := git.NewExecWorktree(a.repoRoot)
+	branches, _ := wt.ListBranches()
+
+	noColor := tui.IsNoColor()
+	model := tui.NewInteractiveModel(slots, branches, noColor)
+
+	p := tea.NewProgram(model)
+	finalModel, err := p.Run()
+	if err != nil {
+		return fmt.Errorf("interactive mode: %w", err)
+	}
+
+	m := finalModel.(tui.Model)
+	if m.Aborted() {
+		return nil
+	}
+
+	result, ok := m.GetResult()
+	if !ok {
+		return nil
+	}
+
+	if result.BranchName == "" {
+		return runGetPath(a.mgr, result.SlotName, out)
+	}
+
+	return runLoad(a, result.SlotName, result.BranchName, result.CreateBranch, out)
 }
 
 func Execute() {
