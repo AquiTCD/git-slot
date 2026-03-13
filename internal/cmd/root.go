@@ -98,7 +98,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	if flagList {
-		return runList(mgr, out)
+		return runList(mgr, out, flagJSON)
 	}
 	if flagClear != "" {
 		return runClear(mgr, flagClear, out)
@@ -107,7 +107,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return runSwap(mgr, flagSwap, out)
 	}
 	if cmd.Flags().Changed("status") {
-		return runStatus(mgr, flagStatus, out)
+		return runStatus(mgr, flagStatus, out, flagJSON)
 	}
 
 	slotName := args[0]
@@ -147,10 +147,18 @@ func bootstrap() (*slot.Manager, error) {
 	return slot.NewManager(cfg, basePath, wt), nil
 }
 
-func runList(mgr *slot.Manager, out io.Writer) error {
+func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
 	slots, err := mgr.List()
 	if err != nil {
 		return err
+	}
+
+	if useJSON {
+		items := make([]jsonSlot, len(slots))
+		for i, s := range slots {
+			items[i] = slotToJSON(s)
+		}
+		return writeJSON(out, jsonSlotList{Slots: items})
 	}
 
 	if len(slots) == 0 {
@@ -223,11 +231,18 @@ func runSwap(mgr *slot.Manager, swapArgs []string, out io.Writer) error {
 	return nil
 }
 
-func runStatus(mgr *slot.Manager, slotName string, out io.Writer) error {
+func runStatus(mgr *slot.Manager, slotName string, out io.Writer, useJSON bool) error {
 	if slotName == "" {
 		statuses, err := mgr.StatusAll()
 		if err != nil {
 			return err
+		}
+		if useJSON {
+			items := make([]jsonSlotStatus, len(statuses))
+			for i, s := range statuses {
+				items[i] = statusToJSON(s)
+			}
+			return writeJSON(out, items)
 		}
 		for i, st := range statuses {
 			if i > 0 {
@@ -237,9 +252,13 @@ func runStatus(mgr *slot.Manager, slotName string, out io.Writer) error {
 		}
 		return nil
 	}
+
 	st, err := mgr.Status(slotName)
 	if err != nil {
 		return err
+	}
+	if useJSON {
+		return writeJSON(out, statusToJSON(*st))
 	}
 	printSlotStatus(*st, out)
 	return nil
