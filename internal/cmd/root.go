@@ -8,6 +8,7 @@ import (
 
 	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/AquiTCD/git-slot/internal/git"
+	"github.com/AquiTCD/git-slot/internal/hook"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/spf13/cobra"
@@ -92,35 +93,42 @@ func run(cmd *cobra.Command, args []string) error {
 		newBranch = flagBranch
 	}
 
-	mgr, err := bootstrap()
+	a, err := bootstrap()
 	if err != nil {
 		return err
 	}
 
 	if flagList {
-		return runList(mgr, out, flagJSON)
+		return runList(a.mgr, out, flagJSON)
 	}
 	if flagClear != "" {
-		return runClear(mgr, flagClear, out)
+		return runClear(a, flagClear, out)
 	}
 	if cmd.Flags().Changed("swap") {
-		return runSwap(mgr, flagSwap, out)
+		return runSwap(a.mgr, flagSwap, out)
 	}
 	if cmd.Flags().Changed("status") {
-		return runStatus(mgr, flagStatus, out, flagJSON)
+		return runStatus(a.mgr, flagStatus, out, flagJSON)
 	}
 
 	slotName := args[0]
 	if len(args) == 2 {
-		return runLoad(mgr, slotName, args[1], false, out)
+		return runLoad(a, slotName, args[1], false, out)
 	}
 	if newBranch != "" {
-		return runLoad(mgr, slotName, newBranch, true, out)
+		return runLoad(a, slotName, newBranch, true, out)
 	}
-	return runGetPath(mgr, slotName, out)
+	return runGetPath(a.mgr, slotName, out)
 }
 
-func bootstrap() (*slot.Manager, error) {
+type app struct {
+	mgr      *slot.Manager
+	cfg      *config.Config
+	basePath string
+	repoRoot string
+}
+
+func bootstrap() (*app, error) {
 	detector := git.NewExecDetector("")
 	repoRoot, err := detector.RepoRoot()
 	if err != nil {
@@ -144,7 +152,12 @@ func bootstrap() (*slot.Manager, error) {
 	}
 
 	wt := git.NewExecWorktree(repoRoot)
-	return slot.NewManager(cfg, basePath, wt), nil
+	return &app{
+		mgr:      slot.NewManager(cfg, basePath, wt),
+		cfg:      cfg,
+		basePath: basePath,
+		repoRoot: repoRoot,
+	}, nil
 }
 
 func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
@@ -190,23 +203,61 @@ func formatSlotLine(s slot.Slot, nameWidth int) string {
 	return line
 }
 
-func runClear(mgr *slot.Manager, slotName string, out io.Writer) error {
-	if err := mgr.Clear(slotName, slot.ClearOptions{Force: flagForce}); err != nil {
+func runClear(a *app, slotName string, out io.Writer) error {
+	hookRunner := hook.NewRunner(out, os.Stderr)
+	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
+
+	env := hook.HookEnv{
+		SlotName: slotName,
+		SlotPath: slotPath,
+		RepoRoot: a.repoRoot,
+		Action:   "clear",
+	}
+
+	if err := hookRunner.Run(a.cfg.Hooks.PreClear, env); err != nil {
+		return fmt.Errorf("pre_clear hook: %w", err)
+	}
+
+	if err := a.mgr.Clear(slotName, slot.ClearOptions{Force: flagForce}); err != nil {
 		return err
 	}
+
+	if err := hookRunner.Run(a.cfg.Hooks.PostClear, env); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_clear hook: %v\n", err)
+	}
+
 	_, _ = fmt.Fprintf(out, "Slot '%s' is now empty.\n", slotName)
 	return nil
 }
 
-func runLoad(mgr *slot.Manager, slotName, branchName string, createBranch bool, out io.Writer) error {
-	err := mgr.Load(slotName, branchName, slot.LoadOptions{
+func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writer) error {
+	hookRunner := hook.NewRunner(out, os.Stderr)
+	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
+
+	env := hook.HookEnv{
+		SlotName: slotName,
+		SlotPath: slotPath,
+		Branch:   branchName,
+		RepoRoot: a.repoRoot,
+		Action:   "load",
+	}
+
+	if err := hookRunner.Run(a.cfg.Hooks.PreLoad, env); err != nil {
+		return fmt.Errorf("pre_load hook: %w", err)
+	}
+
+	if err := a.mgr.Load(slotName, branchName, slot.LoadOptions{
 		CreateBranch: createBranch,
 		Force:        flagForce,
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
-	path, _ := mgr.GetPath(slotName)
+
+	if err := hookRunner.Run(a.cfg.Hooks.PostLoad, env); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_load hook: %v\n", err)
+	}
+
+	path, _ := a.mgr.GetPath(slotName)
 	_, _ = fmt.Fprintf(out, "Slot '%s' is ready.\n  Path: %s\n", slotName, path)
 	return nil
 }
