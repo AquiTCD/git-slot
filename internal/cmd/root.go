@@ -73,21 +73,11 @@ func run(cmd *cobra.Command, args []string) error {
 
 	out := cmd.OutOrStdout()
 
-	// Phase 2b stubs — return early before bootstrap
-	if cmd.Flags().Changed("swap") {
-		_, _ = fmt.Fprintf(out, "not implemented yet: --swap %v\n", flagSwap)
-		return nil
-	}
-	if cmd.Flags().Changed("status") {
-		_, _ = fmt.Fprintf(out, "not implemented yet: --status %s\n", flagStatus)
-		return nil
-	}
 	if flagInit {
-		_, _ = fmt.Fprintln(out, "not implemented yet: --init")
-		return nil
+		return runInit(out)
 	}
 
-	if len(args) == 0 && !flagList && flagClear == "" {
+	if len(args) == 0 && !flagList && flagClear == "" && !cmd.Flags().Changed("swap") && !cmd.Flags().Changed("status") {
 		return cmd.Help()
 	}
 	if len(args) > 2 {
@@ -112,6 +102,12 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	if flagClear != "" {
 		return runClear(mgr, flagClear, out)
+	}
+	if cmd.Flags().Changed("swap") {
+		return runSwap(mgr, flagSwap, out)
+	}
+	if cmd.Flags().Changed("status") {
+		return runStatus(mgr, flagStatus, out)
 	}
 
 	slotName := args[0]
@@ -213,6 +209,74 @@ func runGetPath(mgr *slot.Manager, slotName string, out io.Writer) error {
 		return err
 	}
 	_, _ = fmt.Fprintln(out, path)
+	return nil
+}
+
+func runSwap(mgr *slot.Manager, swapArgs []string, out io.Writer) error {
+	if len(swapArgs) != 2 {
+		return fmt.Errorf("--swap requires exactly 2 slot names")
+	}
+	if err := mgr.Swap(swapArgs[0], swapArgs[1]); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(out, "Swapped slots '%s' and '%s'.\n", swapArgs[0], swapArgs[1])
+	return nil
+}
+
+func runStatus(mgr *slot.Manager, slotName string, out io.Writer) error {
+	if slotName == "" {
+		statuses, err := mgr.StatusAll()
+		if err != nil {
+			return err
+		}
+		for i, st := range statuses {
+			if i > 0 {
+				_, _ = fmt.Fprintln(out)
+			}
+			printSlotStatus(st, out)
+		}
+		return nil
+	}
+	st, err := mgr.Status(slotName)
+	if err != nil {
+		return err
+	}
+	printSlotStatus(*st, out)
+	return nil
+}
+
+func printSlotStatus(st slot.SlotStatus, out io.Writer) {
+	_, _ = fmt.Fprintf(out, "Slot:    %s\n", st.Name)
+	_, _ = fmt.Fprintf(out, "State:   %s\n", st.DisplayState())
+	if st.State == slot.SlotActive {
+		_, _ = fmt.Fprintf(out, "Branch:  %s\n", st.Branch)
+		_, _ = fmt.Fprintf(out, "HEAD:    %s", st.HeadHash)
+		if st.CommitSubject != "" {
+			_, _ = fmt.Fprintf(out, " (%s)", st.CommitSubject)
+		}
+		_, _ = fmt.Fprintln(out)
+		_, _ = fmt.Fprintf(out, "Path:    %s\n", st.Path)
+		if len(st.Changes) > 0 {
+			_, _ = fmt.Fprintln(out, "Changes:")
+			for _, c := range st.Changes {
+				_, _ = fmt.Fprintf(out, "  %s\n", c)
+			}
+		}
+	}
+}
+
+func runInit(out io.Writer) error {
+	detector := git.NewExecDetector("")
+	repoRoot, _ := detector.RepoRoot()
+
+	path, err := config.Init(config.InitOptions{
+		Global: flagGlobal,
+		Force:  flagForce,
+	}, repoRoot)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(out, "Created %s with template configuration.\n", path)
 	return nil
 }
 
