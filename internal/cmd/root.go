@@ -1,9 +1,15 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 
+	"github.com/AquiTCD/git-slot/internal/config"
+	"github.com/AquiTCD/git-slot/internal/git"
+	"github.com/AquiTCD/git-slot/internal/pathutil"
+	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/spf13/cobra"
 )
 
@@ -67,60 +73,165 @@ func run(cmd *cobra.Command, args []string) error {
 
 	out := cmd.OutOrStdout()
 
-	if flagList {
-		_, _ = fmt.Fprintln(out, "not implemented yet: --list")
-		return nil
-	}
-
-	if flagClear != "" {
-		_, _ = fmt.Fprintf(out, "not implemented yet: --clear %s\n", flagClear)
-		return nil
-	}
-
+	// Phase 2b stubs — return early before bootstrap
 	if cmd.Flags().Changed("swap") {
 		_, _ = fmt.Fprintf(out, "not implemented yet: --swap %v\n", flagSwap)
 		return nil
 	}
-
 	if cmd.Flags().Changed("status") {
 		_, _ = fmt.Fprintf(out, "not implemented yet: --status %s\n", flagStatus)
 		return nil
 	}
-
 	if flagInit {
 		_, _ = fmt.Fprintln(out, "not implemented yet: --init")
 		return nil
 	}
 
+	if len(args) == 0 && !flagList && flagClear == "" {
+		return cmd.Help()
+	}
+	if len(args) > 2 {
+		return fmt.Errorf("too many arguments. Run 'git slot --help' for usage")
+	}
+
 	newBranch := flagCreate
-	if newBranch == "" {
+	if flagBranch != "" {
+		if newBranch != "" && newBranch != flagBranch {
+			return fmt.Errorf("--create and --branch cannot specify different values")
+		}
 		newBranch = flagBranch
 	}
 
-	switch len(args) {
-	case 0:
-		return cmd.Help()
-	case 1:
-		slotName := args[0]
-		if newBranch != "" {
-			_, _ = fmt.Fprintf(out, "not implemented yet: create branch '%s' in slot '%s'\n", newBranch, slotName)
-			return nil
-		}
-		_, _ = fmt.Fprintf(out, "not implemented yet: get path for slot '%s'\n", slotName)
-		return nil
-	case 2:
-		slotName := args[0]
-		branchName := args[1]
-		_, _ = fmt.Fprintf(out, "not implemented yet: load branch '%s' into slot '%s'\n", branchName, slotName)
-		return nil
-	default:
-		return fmt.Errorf("too many arguments. Run 'git slot --help' for usage")
+	mgr, err := bootstrap()
+	if err != nil {
+		return err
 	}
+
+	if flagList {
+		return runList(mgr, out)
+	}
+	if flagClear != "" {
+		return runClear(mgr, flagClear, out)
+	}
+
+	slotName := args[0]
+	if len(args) == 2 {
+		return runLoad(mgr, slotName, args[1], false, out)
+	}
+	if newBranch != "" {
+		return runLoad(mgr, slotName, newBranch, true, out)
+	}
+	return runGetPath(mgr, slotName, out)
+}
+
+func bootstrap() (*slot.Manager, error) {
+	detector := git.NewExecDetector("")
+	repoRoot, err := detector.RepoRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	var remote *git.RemoteInfo
+	resolver := git.NewExecRemoteURLResolver(repoRoot)
+	if rawURL, err := resolver.RemoteURL("origin"); err == nil {
+		remote, _ = git.ParseRemoteURL(rawURL)
+	}
+
+	cfg, err := config.LoadConfig(config.LoadOptions{RepoRoot: repoRoot})
+	if err != nil {
+		return nil, err
+	}
+
+	basePath, err := pathutil.ResolveSlotsBasePath(cfg, remote)
+	if err != nil {
+		return nil, err
+	}
+
+	wt := git.NewExecWorktree(repoRoot)
+	return slot.NewManager(cfg, basePath, wt), nil
+}
+
+func runList(mgr *slot.Manager, out io.Writer) error {
+	slots, err := mgr.List()
+	if err != nil {
+		return err
+	}
+
+	if len(slots) == 0 {
+		_, _ = fmt.Fprintln(out, "No slots defined.")
+		return nil
+	}
+
+	maxName := 0
+	for _, s := range slots {
+		if len(s.Name) > maxName {
+			maxName = len(s.Name)
+		}
+	}
+
+	for _, s := range slots {
+		_, _ = fmt.Fprintln(out, formatSlotLine(s, maxName))
+	}
+	return nil
+}
+
+func formatSlotLine(s slot.Slot, nameWidth int) string {
+	line := fmt.Sprintf("  %-*s  [%s]", nameWidth, s.Name, s.DisplayState())
+	if s.State == slot.SlotActive {
+		line += fmt.Sprintf("  %s  (%s)", s.Branch, s.HeadHash)
+		if s.IsDirty {
+			line += "  *dirty"
+		}
+	}
+	return line
+}
+
+func runClear(mgr *slot.Manager, slotName string, out io.Writer) error {
+	if err := mgr.Clear(slotName, slot.ClearOptions{Force: flagForce}); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(out, "Slot '%s' is now empty.\n", slotName)
+	return nil
+}
+
+func runLoad(mgr *slot.Manager, slotName, branchName string, createBranch bool, out io.Writer) error {
+	err := mgr.Load(slotName, branchName, slot.LoadOptions{
+		CreateBranch: createBranch,
+		Force:        flagForce,
+	})
+	if err != nil {
+		return err
+	}
+	path, _ := mgr.GetPath(slotName)
+	_, _ = fmt.Fprintf(out, "Slot '%s' is ready.\n  Path: %s\n", slotName, path)
+	return nil
+}
+
+func runGetPath(mgr *slot.Manager, slotName string, out io.Writer) error {
+	path, err := mgr.GetPath(slotName)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintln(out, path)
+	return nil
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(1)
+		_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(mapExitCode(err))
 	}
+}
+
+func mapExitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	if errors.Is(err, config.ErrNoConfig) || errors.Is(err, config.ErrConfigParse) {
+		return 2
+	}
+	if errors.Is(err, git.ErrNotInRepo) {
+		return 3
+	}
+	return 1
 }
