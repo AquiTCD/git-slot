@@ -23,9 +23,40 @@ Git Slot は、`git worktree` を TOML 設定で定義された固定名のス�
 
 ## インストール
 
-`git-slot` バイナリを `PATH` の通った場所に配置する。Git が自動的に `git slot` コマンドとして認識する。
+### `go install`（推奨）
 
 ```bash
+go install github.com/AquiTCD/git-slot/cmd/git-slot@latest
+```
+
+`$GOPATH/bin` に PATH が通っていない場合は、シェル設定ファイル（`~/.zshrc` 等）に以下を追加:
+
+```bash
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+### ソースからビルド
+
+```bash
+git clone https://github.com/AquiTCD/git-slot.git
+cd git-slot
+make build
+```
+
+`./bin/git-slot` が生成されるので、PATH の通った場所にコピーまたはリンクする:
+
+```bash
+# 例: ~/.local/bin にリンク
+ln -sf "$PWD/bin/git-slot" ~/.local/bin/git-slot
+```
+
+### 動作確認
+
+`git-slot` が PATH に配置されると、Git が自動的に `git slot` サブコマンドとして認識する。
+
+```bash
+git slot --version
+
 # ショートカットを設定する場合（オプション）
 alias gs='git slot'
 ```
