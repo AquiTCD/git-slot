@@ -20,12 +20,15 @@ const configTemplate = `# git-slot.toml — Git Slot configuration
 
 [[slots]]
 name = "slot-1"
+# icon = "🔧"
 
 [[slots]]
 name = "slot-2"
+# icon = "🔥"
 
 [[slots]]
 name = "slot-3"
+# icon = "💧"
 
 # Optional: hooks
 # [hooks]

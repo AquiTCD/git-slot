@@ -9,6 +9,7 @@ const (
 
 type Slot struct {
 	Name     string
+	Icon     string
 	Path     string
 	State    SlotState
 	Branch   string

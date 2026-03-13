@@ -16,6 +16,7 @@ type Config struct {
 
 type SlotDefinition struct {
 	Name string `toml:"name"`
+	Icon string `toml:"icon"`
 }
 
 type HooksConfig struct {

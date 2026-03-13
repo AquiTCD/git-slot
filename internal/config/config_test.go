@@ -107,6 +107,28 @@ post_load = "run.sh"
 			},
 		},
 		{
+			name: "slots with icon field",
+			input: `
+[[slots]]
+name = "wood"
+icon = "🌱"
+
+[[slots]]
+name = "fire"
+icon = "🔥"
+
+[[slots]]
+name = "plain"
+`,
+			expected: &Config{
+				Slots: []SlotDefinition{
+					{Name: "wood", Icon: "🌱"},
+					{Name: "fire", Icon: "🔥"},
+					{Name: "plain"},
+				},
+			},
+		},
+		{
 			name: "unknown keys silently ignored",
 			input: `
 unknown_key = "whatever"
