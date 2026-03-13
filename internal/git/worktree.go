@@ -19,8 +19,11 @@ type Worktree interface {
 	Add(path, branch string) error
 	AddNewBranch(path, newBranch string) error
 	Remove(path string, force bool) error
+	Move(oldPath, newPath string) error
 	BranchExists(branch string) (bool, error)
 	IsDirty(path string) (bool, error)
+	CommitSubject(path string) (string, error)
+	StatusShort(path string) ([]string, error)
 }
 
 type ExecWorktree struct {
@@ -147,4 +150,35 @@ func (w *ExecWorktree) IsDirty(path string) (bool, error) {
 	}
 
 	return strings.TrimSpace(string(out)) != "", nil
+}
+
+func (w *ExecWorktree) Move(oldPath, newPath string) error {
+	cmd := exec.Command("git", "worktree", "move", oldPath, newPath)
+	cmd.Dir = w.dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git worktree move: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func (w *ExecWorktree) CommitSubject(path string) (string, error) {
+	cmd := exec.Command("git", "-C", path, "log", "-1", "--format=%s")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git log: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func (w *ExecWorktree) StatusShort(path string) ([]string, error) {
+	cmd := exec.Command("git", "-C", path, "status", "--short")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git status --short: %w", err)
+	}
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
 }

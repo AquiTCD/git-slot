@@ -177,3 +177,53 @@ func TestExecWorktree_IsDirty_Dirty(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, dirty)
 }
+
+func TestExecWorktree_Move(t *testing.T) {
+	dir := setupTestRepo(t)
+	run(t, dir, "git", "branch", "move-me")
+
+	oldPath := filepath.Join(t.TempDir(), "wt-old")
+	w := git.NewExecWorktree(dir)
+	require.NoError(t, w.Add(oldPath, "move-me"))
+
+	newPath := filepath.Join(t.TempDir(), "wt-new")
+	err := w.Move(oldPath, newPath)
+	require.NoError(t, err)
+
+	_, err = os.Stat(oldPath)
+	assert.True(t, os.IsNotExist(err))
+
+	info, err := os.Stat(newPath)
+	require.NoError(t, err)
+	assert.True(t, info.IsDir())
+}
+
+func TestExecWorktree_CommitSubject(t *testing.T) {
+	dir := setupTestRepo(t)
+	w := git.NewExecWorktree(dir)
+
+	subject, err := w.CommitSubject(dir)
+	require.NoError(t, err)
+	assert.Equal(t, "initial", subject)
+}
+
+func TestExecWorktree_StatusShort_Clean(t *testing.T) {
+	dir := setupTestRepo(t)
+	w := git.NewExecWorktree(dir)
+
+	lines, err := w.StatusShort(dir)
+	require.NoError(t, err)
+	assert.Nil(t, lines)
+}
+
+func TestExecWorktree_StatusShort_Dirty(t *testing.T) {
+	dir := setupTestRepo(t)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "untracked.txt"), []byte("data"), 0o644))
+
+	w := git.NewExecWorktree(dir)
+	lines, err := w.StatusShort(dir)
+
+	require.NoError(t, err)
+	require.Len(t, lines, 1)
+	assert.Contains(t, lines[0], "untracked.txt")
+}
