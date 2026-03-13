@@ -35,6 +35,7 @@ func (m *Manager) List() ([]Slot, error) {
 		slotPath := pathutil.ResolveSlotPath(m.basePath, def.Name)
 		s := Slot{
 			Name: def.Name,
+			Icon: def.Icon,
 			Path: slotPath,
 		}
 
@@ -236,23 +237,25 @@ func (m *Manager) StatusAll() ([]SlotStatus, error) {
 	return statuses, nil
 }
 
-func (m *Manager) findSlotDef(name string) bool {
-	for _, def := range m.cfg.Slots {
-		if def.Name == name {
-			return true
+func (m *Manager) findSlotDef(name string) *config.SlotDefinition {
+	for i := range m.cfg.Slots {
+		if m.cfg.Slots[i].Name == name {
+			return &m.cfg.Slots[i]
 		}
 	}
-	return false
+	return nil
 }
 
 func (m *Manager) resolveSlot(name string) (*Slot, error) {
-	if !m.findSlotDef(name) {
+	def := m.findSlotDef(name)
+	if def == nil {
 		return nil, &SlotError{SlotName: name, Err: ErrSlotUnknown}
 	}
 
 	slotPath := pathutil.ResolveSlotPath(m.basePath, name)
 	s := &Slot{
 		Name: name,
+		Icon: def.Icon,
 		Path: slotPath,
 	}
 

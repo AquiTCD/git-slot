@@ -24,6 +24,7 @@ type Worktree interface {
 	IsDirty(path string) (bool, error)
 	CommitSubject(path string) (string, error)
 	StatusShort(path string) ([]string, error)
+	ListBranches() ([]string, error)
 }
 
 type ExecWorktree struct {
@@ -168,6 +169,20 @@ func (w *ExecWorktree) CommitSubject(path string) (string, error) {
 		return "", fmt.Errorf("git log: %w", err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func (w *ExecWorktree) ListBranches() ([]string, error) {
+	cmd := exec.Command("git", "branch", "--list", "--format=%(refname:short)")
+	cmd.Dir = w.dir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git branch --list: %w", err)
+	}
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
 }
 
 func (w *ExecWorktree) StatusShort(path string) ([]string, error) {

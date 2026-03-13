@@ -58,3 +58,50 @@ func TestCompletion_NoArgs(t *testing.T) {
 		t.Fatal("expected error when no shell argument provided")
 	}
 }
+
+func TestWrapper_Zsh(t *testing.T) {
+	out, err := executeCommand("wrapper", "zsh")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "gsl()") {
+		t.Errorf("expected gsl function definition, got: %s", out)
+	}
+	if !strings.Contains(out, "cd") {
+		t.Errorf("expected cd in wrapper, got: %s", out)
+	}
+}
+
+func TestWrapper_Bash(t *testing.T) {
+	out, err := executeCommand("wrapper", "bash")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "gsl()") {
+		t.Errorf("expected gsl function definition, got: %s", out)
+	}
+}
+
+func TestWrapper_Fish(t *testing.T) {
+	out, err := executeCommand("wrapper", "fish")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "function gsl") {
+		t.Errorf("expected fish gsl function, got: %s", out)
+	}
+}
+
+func TestWrapper_InvalidShell(t *testing.T) {
+	_, err := executeCommand("wrapper", "invalid")
+	if err == nil {
+		t.Fatal("expected error for invalid shell argument")
+	}
+}
+
+func TestWrapper_NoArgs(t *testing.T) {
+	_, err := executeCommand("wrapper")
+	if err == nil {
+		t.Fatal("expected error when no shell argument provided")
+	}
+}

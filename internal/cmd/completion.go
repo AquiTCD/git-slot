@@ -1,6 +1,11 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"io"
+
+	"github.com/spf13/cobra"
+)
 
 var completionCmd = &cobra.Command{
 	Use:   "completion [bash|zsh|fish|powershell]",
@@ -49,6 +54,67 @@ PowerShell:
 	},
 }
 
+var wrapperCmd = &cobra.Command{
+	Use:   "wrapper [bash|zsh|fish]",
+	Short: "Generate gsl shell wrapper function",
+	Long: `Generate a shell wrapper function "gsl" that calls git-slot and
+automatically cd's into the slot directory on success.
+
+Add to your shell config:
+
+Bash / Zsh:
+  $ eval "$(git-slot wrapper zsh)"
+
+Fish:
+  $ git-slot wrapper fish | source
+`,
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish"},
+	Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		out := cmd.OutOrStdout()
+		switch args[0] {
+		case "bash", "zsh":
+			return writeShWrapper(out)
+		case "fish":
+			return writeFishWrapper(out)
+		}
+		return nil
+	},
+}
+
+func writeShWrapper(w io.Writer) error {
+	_, err := fmt.Fprint(w, `gsl() {
+  local result
+  result=$(command git-slot "$@" </dev/tty 2>/dev/tty)
+  local rc=$?
+  if [ $rc -eq 0 ] && [ -n "$result" ] && [ -d "$result" ]; then
+    cd "$result" || return 1
+  elif [ $rc -ne 0 ] || [ -n "$result" ]; then
+    command git-slot "$@"
+    return $?
+  fi
+}
+`)
+	return err
+}
+
+func writeFishWrapper(w io.Writer) error {
+	_, err := fmt.Fprint(w, `function gsl
+  set -l result (command git-slot $argv </dev/tty 2>/dev/tty)
+  set -l rc $status
+  if test $rc -eq 0; and test -n "$result"; and test -d "$result"
+    cd "$result"
+  else if test $rc -ne 0; or test -n "$result"
+    command git-slot $argv
+    return $status
+  end
+end
+`)
+	return err
+}
+
 func init() {
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(wrapperCmd)
 }

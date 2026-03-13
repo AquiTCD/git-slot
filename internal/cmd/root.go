@@ -11,6 +11,8 @@ import (
 	"github.com/AquiTCD/git-slot/internal/hook"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/AquiTCD/git-slot/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +28,7 @@ var (
 	flagForce   bool
 	flagJSON    bool
 	flagVersion bool
+	flagEject   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -38,11 +41,11 @@ Usage as a git subcommand:
   git slot <slot> <branch>       Load an existing branch into a slot
   git slot <slot> -c <branch>    Create a new branch and load it into a slot
   git slot <slot>                Print the slot's worktree path
-
 Management flags:
   git slot -l, --list            List all slots and their status
   git slot -d, --clear <slot>    Clear (remove) a slot's worktree
   git slot -s, --swap <A> <B>    Swap branches between two slots
+  git slot -e, --eject           Print the repository root path (use with gsl to cd back)
   git slot --status [slot]       Show detailed slot status
   git slot --init                Generate a template config file`,
 	SilenceUsage:          true,
@@ -63,6 +66,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and load into slot")
 	rootCmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Alias for --create")
 	rootCmd.Flags().BoolVar(&flagForce, "force", false, "Skip confirmation for destructive actions")
+	rootCmd.Flags().BoolVarP(&flagEject, "eject", "e", false, "Print the repository root path (use with gsl to cd back)")
 	rootCmd.Flags().BoolVar(&flagJSON, "json", false, "Output in JSON format")
 	rootCmd.Flags().BoolVar(&flagVersion, "version", false, "Print version information")
 
@@ -81,7 +85,23 @@ func run(cmd *cobra.Command, args []string) error {
 		return runInit(out)
 	}
 
+	if flagEject {
+		a, err := bootstrap()
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(out, a.repoRoot)
+		return nil
+	}
+
 	if len(args) == 0 && !flagList && flagClear == "" && !cmd.Flags().Changed("swap") && !cmd.Flags().Changed("status") {
+		if tui.IsTTY(os.Stdin) {
+			a, err := bootstrap()
+			if err != nil {
+				return err
+			}
+			return runInteractive(a, cmd.OutOrStdout())
+		}
 		return cmd.Help()
 	}
 	if len(args) > 2 {
@@ -177,33 +197,9 @@ func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
 		return writeJSON(out, jsonSlotList{Slots: items})
 	}
 
-	if len(slots) == 0 {
-		_, _ = fmt.Fprintln(out, "No slots defined.")
-		return nil
-	}
-
-	maxName := 0
-	for _, s := range slots {
-		if len(s.Name) > maxName {
-			maxName = len(s.Name)
-		}
-	}
-
-	for _, s := range slots {
-		_, _ = fmt.Fprintln(out, formatSlotLine(s, maxName))
-	}
+	noColor := !tui.IsTTY(out) || tui.IsNoColor()
+	_, _ = fmt.Fprintln(out, tui.RenderSlotList(slots, noColor))
 	return nil
-}
-
-func formatSlotLine(s slot.Slot, nameWidth int) string {
-	line := fmt.Sprintf("  %-*s  [%s]", nameWidth, s.Name, s.DisplayState())
-	if s.State == slot.SlotActive {
-		line += fmt.Sprintf("  %s  (%s)", s.Branch, s.HeadHash)
-		if s.IsDirty {
-			line += "  *dirty"
-		}
-	}
-	return line
 }
 
 func runClear(a *app, slotName string, out io.Writer) error {
@@ -229,7 +225,7 @@ func runClear(a *app, slotName string, out io.Writer) error {
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_clear hook: %v\n", err)
 	}
 
-	_, _ = fmt.Fprintf(out, "Slot '%s' is now empty.\n", slotName)
+	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is now empty.\n", slotName)
 	return nil
 }
 
@@ -261,7 +257,8 @@ func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writ
 	}
 
 	path, _ := a.mgr.GetPath(slotName)
-	_, _ = fmt.Fprintf(out, "Slot '%s' is ready.\n  Path: %s\n", slotName, path)
+	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is ready.\n", slotName)
+	_, _ = fmt.Fprintln(out, path)
 	return nil
 }
 
@@ -281,7 +278,7 @@ func runSwap(mgr *slot.Manager, swapArgs []string, out io.Writer) error {
 	if err := mgr.Swap(swapArgs[0], swapArgs[1]); err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(out, "Swapped slots '%s' and '%s'.\n", swapArgs[0], swapArgs[1])
+	_, _ = fmt.Fprintf(os.Stderr, "Swapped slots '%s' and '%s'.\n", swapArgs[0], swapArgs[1])
 	return nil
 }
 
@@ -349,8 +346,47 @@ func runInit(out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(out, "Created %s with template configuration.\n", path)
+	_, _ = fmt.Fprintf(os.Stderr, "Created %s with template configuration.\n", path)
 	return nil
+}
+
+func runInteractive(a *app, out io.Writer) error {
+	slots, err := a.mgr.List()
+	if err != nil {
+		return err
+	}
+	if len(slots) == 0 {
+		_, _ = fmt.Fprintln(out, "No slots defined.")
+		return nil
+	}
+
+	wt := git.NewExecWorktree(a.repoRoot)
+	branches, _ := wt.ListBranches()
+
+	noColor := tui.IsNoColor()
+	model := tui.NewInteractiveModel(slots, branches, noColor)
+
+	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
+	finalModel, err := p.Run()
+	if err != nil {
+		return fmt.Errorf("interactive mode: %w", err)
+	}
+
+	m := finalModel.(tui.Model)
+	if m.Aborted() {
+		return nil
+	}
+
+	result, ok := m.GetResult()
+	if !ok {
+		return nil
+	}
+
+	if result.BranchName == "" {
+		return runGetPath(a.mgr, result.SlotName, out)
+	}
+
+	return runLoad(a, result.SlotName, result.BranchName, result.CreateBranch, out)
 }
 
 func Execute() {
