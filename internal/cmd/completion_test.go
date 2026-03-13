@@ -64,8 +64,8 @@ func TestWrapper_Zsh(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "gs()") {
-		t.Errorf("expected gs function definition, got: %s", out)
+	if !strings.Contains(out, "gsl()") {
+		t.Errorf("expected gsl function definition, got: %s", out)
 	}
 	if !strings.Contains(out, "cd") {
 		t.Errorf("expected cd in wrapper, got: %s", out)
@@ -77,8 +77,8 @@ func TestWrapper_Bash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "gs()") {
-		t.Errorf("expected gs function definition, got: %s", out)
+	if !strings.Contains(out, "gsl()") {
+		t.Errorf("expected gsl function definition, got: %s", out)
 	}
 }
 
@@ -87,8 +87,8 @@ func TestWrapper_Fish(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "function gs") {
-		t.Errorf("expected fish gs function, got: %s", out)
+	if !strings.Contains(out, "function gsl") {
+		t.Errorf("expected fish gsl function, got: %s", out)
 	}
 }
 

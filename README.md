@@ -56,9 +56,32 @@ ln -sf "$PWD/bin/git-slot" ~/.local/bin/git-slot
 
 ```bash
 git slot --version
+```
 
-# ショートカットを設定する場合（オプション）
-alias gs='git slot'
+### cd ラッパー (`gsl`)
+
+`gsl` コマンドを使うと、スロットへの装填・移動を一発で行える。`git slot` は CLI ツールとして表示・管理を担当し、`gsl` は cd 付きの日常操作用ラッパー。
+
+```bash
+# Bash / Zsh — シェル設定ファイルに追加:
+eval "$(git-slot wrapper zsh)"
+
+# Fish:
+git-slot wrapper fish | source
+```
+
+```bash
+# gsl でスロットにブランチを装填 → 自動で cd
+gsl wood feature/nice-ui
+
+# 別のスロットに切り替え（cd も自動）
+gsl fire hotfix/urgent-bug
+
+# 引数なしでインタラクティブモード（TUI でスロット選択）
+gsl
+
+# 元のリポジトリに戻る
+gsl -e
 ```
 
 ## クイックスタート
@@ -79,8 +102,8 @@ git slot hotfix -c hotfix/urgent-bug
 # スロット一覧を確認
 git slot --list
 
-# スロットのパスを取得して移動
-cd $(git slot main-work)
+# スロットのパスを取得して移動（gsl なら自動 cd）
+gsl main-work
 
 # スロットを解除
 git slot -d main-work
@@ -132,6 +155,7 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `git slot <slot> <branch>` | スロットにブランチを装填 |
 | `git slot <slot> -c <branch>` | 新規ブランチを作成して装填（`-b` も可） |
 | `git slot <slot>` | スロットのパスを出力 |
+| `git slot -e, --eject` | リポジトリルートのパスを出力（`gsl -e` で cd） |
 | `git slot -l, --list` | スロット一覧を表示 |
 | `git slot -d, --clear <slot>` | スロットを解除 |
 | `git slot -s, --swap <A> <B>` | スロット間のブランチを入れ替え |

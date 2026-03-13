@@ -56,8 +56,8 @@ PowerShell:
 
 var wrapperCmd = &cobra.Command{
 	Use:   "wrapper [bash|zsh|fish]",
-	Short: "Generate gs shell wrapper function",
-	Long: `Generate a shell wrapper function "gs" that calls git-slot and
+	Short: "Generate gsl shell wrapper function",
+	Long: `Generate a shell wrapper function "gsl" that calls git-slot and
 automatically cd's into the slot directory on success.
 
 Add to your shell config:
@@ -84,18 +84,14 @@ Fish:
 }
 
 func writeShWrapper(w io.Writer) error {
-	_, err := fmt.Fprint(w, `gs() {
-  if [ $# -eq 0 ]; then
-    command git slot
-    return $?
-  fi
+	_, err := fmt.Fprint(w, `gsl() {
   local result
-  result=$(command git slot "$@" 2>/dev/null)
+  result=$(command git-slot "$@" </dev/tty 2>/dev/tty)
   local rc=$?
   if [ $rc -eq 0 ] && [ -n "$result" ] && [ -d "$result" ]; then
     cd "$result" || return 1
-  else
-    command git slot "$@"
+  elif [ $rc -ne 0 ] || [ -n "$result" ]; then
+    command git-slot "$@"
     return $?
   fi
 }
@@ -104,17 +100,13 @@ func writeShWrapper(w io.Writer) error {
 }
 
 func writeFishWrapper(w io.Writer) error {
-	_, err := fmt.Fprint(w, `function gs
-  if test (count $argv) -eq 0
-    command git slot
-    return $status
-  end
-  set -l result (command git slot $argv 2>/dev/null)
+	_, err := fmt.Fprint(w, `function gsl
+  set -l result (command git-slot $argv </dev/tty 2>/dev/tty)
   set -l rc $status
   if test $rc -eq 0; and test -n "$result"; and test -d "$result"
     cd "$result"
-  else
-    command git slot $argv
+  else if test $rc -ne 0; or test -n "$result"
+    command git-slot $argv
     return $status
   end
 end

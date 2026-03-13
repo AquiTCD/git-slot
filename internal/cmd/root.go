@@ -28,6 +28,7 @@ var (
 	flagForce   bool
 	flagJSON    bool
 	flagVersion bool
+	flagEject   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -40,11 +41,11 @@ Usage as a git subcommand:
   git slot <slot> <branch>       Load an existing branch into a slot
   git slot <slot> -c <branch>    Create a new branch and load it into a slot
   git slot <slot>                Print the slot's worktree path
-
 Management flags:
   git slot -l, --list            List all slots and their status
   git slot -d, --clear <slot>    Clear (remove) a slot's worktree
   git slot -s, --swap <A> <B>    Swap branches between two slots
+  git slot -e, --eject           Print the repository root path (use with gsl to cd back)
   git slot --status [slot]       Show detailed slot status
   git slot --init                Generate a template config file`,
 	SilenceUsage:          true,
@@ -65,6 +66,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and load into slot")
 	rootCmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Alias for --create")
 	rootCmd.Flags().BoolVar(&flagForce, "force", false, "Skip confirmation for destructive actions")
+	rootCmd.Flags().BoolVarP(&flagEject, "eject", "e", false, "Print the repository root path (use with gsl to cd back)")
 	rootCmd.Flags().BoolVar(&flagJSON, "json", false, "Output in JSON format")
 	rootCmd.Flags().BoolVar(&flagVersion, "version", false, "Print version information")
 
@@ -83,8 +85,17 @@ func run(cmd *cobra.Command, args []string) error {
 		return runInit(out)
 	}
 
+	if flagEject {
+		a, err := bootstrap()
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(out, a.repoRoot)
+		return nil
+	}
+
 	if len(args) == 0 && !flagList && flagClear == "" && !cmd.Flags().Changed("swap") && !cmd.Flags().Changed("status") {
-		if tui.IsTTY(cmd.OutOrStdout()) {
+		if tui.IsTTY(os.Stdin) {
 			a, err := bootstrap()
 			if err != nil {
 				return err
@@ -355,7 +366,7 @@ func runInteractive(a *app, out io.Writer) error {
 	noColor := tui.IsNoColor()
 	model := tui.NewInteractiveModel(slots, branches, noColor)
 
-	p := tea.NewProgram(model)
+	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
 	finalModel, err := p.Run()
 	if err != nil {
 		return fmt.Errorf("interactive mode: %w", err)
