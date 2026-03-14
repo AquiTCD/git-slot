@@ -84,31 +84,35 @@ Fish:
 }
 
 func writeShWrapper(w io.Writer) error {
-	_, err := fmt.Fprint(w, `gsl() {
+	_, err := fmt.Fprintf(w, `gsl() {
   local result
-  result=$(command git-slot "$@" </dev/tty 2>/dev/tty)
+  result=$(command git-slot "$@" </dev/tty)
   local rc=$?
-  if [ $rc -eq 0 ] && [ -n "$result" ] && [ -d "$result" ]; then
-    cd "$result" || return 1
-  elif [ $rc -ne 0 ] || [ -n "$result" ]; then
-    command git-slot "$@"
-    return $?
+  if [ $rc -eq 0 ]; then
+    if [ -n "$result" ] && [ -d "$result" ]; then
+      cd "$result" || return 1
+    elif [ -n "$result" ]; then
+      printf "%%s\n" "$result"
+    fi
   fi
+  return $rc
 }
 `)
 	return err
 }
 
 func writeFishWrapper(w io.Writer) error {
-	_, err := fmt.Fprint(w, `function gsl
-  set -l result (command git-slot $argv </dev/tty 2>/dev/tty)
+	_, err := fmt.Fprintf(w, `function gsl
+  set -l result (command git-slot $argv </dev/tty)
   set -l rc $status
-  if test $rc -eq 0; and test -n "$result"; and test -d "$result"
-    cd "$result"
-  else if test $rc -ne 0; or test -n "$result"
-    command git-slot $argv
-    return $status
+  if test $rc -eq 0
+    if test -n "$result"; and test -d "$result"
+      cd "$result"
+    else if test -n "$result"
+      printf "%%s\n" "$result"
+    end
   end
+  return $rc
 end
 `)
 	return err

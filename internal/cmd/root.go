@@ -62,7 +62,7 @@ func init() {
 	rootCmd.Flags().StringSliceVarP(&flagSwap, "swap", "s", nil, "Swap branches between two slots")
 	rootCmd.Flags().StringVar(&flagStatus, "status", "", "Show detailed slot status")
 	rootCmd.Flags().BoolVar(&flagInit, "init", false, "Generate a template config file")
-	rootCmd.Flags().BoolVar(&flagGlobal, "global", false, "Used with --init to generate global config")
+	rootCmd.Flags().BoolVarP(&flagGlobal, "global", "g", false, "Used with --init to generate global config")
 	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and load into slot")
 	rootCmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Alias for --create")
 	rootCmd.Flags().BoolVar(&flagForce, "force", false, "Skip confirmation for destructive actions")

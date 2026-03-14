@@ -105,3 +105,19 @@ func TestWrapper_NoArgs(t *testing.T) {
 		t.Fatal("expected error when no shell argument provided")
 	}
 }
+
+func TestWrapper_NoDoubleExecution(t *testing.T) {
+	shells := []string{"zsh", "bash", "fish"}
+	for _, shell := range shells {
+		out, err := executeCommand("wrapper", shell)
+		if err != nil {
+			t.Fatalf("unexpected error for %s: %v", shell, err)
+		}
+
+		// The command should be executed exactly once to avoid duplicate output.
+		count := strings.Count(out, "command git-slot")
+		if count != 1 {
+			t.Errorf("expected 'command git-slot' to appear exactly once in %s wrapper, got %d", shell, count)
+		}
+	}
+}

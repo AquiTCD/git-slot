@@ -57,3 +57,13 @@ func TestTooManyArgs(t *testing.T) {
 		t.Fatal("expected error for too many arguments")
 	}
 }
+
+func TestGlobalShorthandFlag(t *testing.T) {
+	f := rootCmd.Flags().Lookup("global")
+	if f == nil {
+		t.Fatal("expected 'global' flag to exist")
+	}
+	if f.Shorthand != "g" {
+		t.Errorf("expected shorthand 'g' for 'global' flag, got '%s'", f.Shorthand)
+	}
+}
