@@ -18,9 +18,26 @@ build: ## Build binary to ./bin/
 
 .PHONY: install
 install: ## Install binary to $GOBIN or $GOPATH/bin
-	go install -ldflags "$(LDFLAGS)" $(PACKAGE)/cmd/$(BINARY_NAME)
-	@echo "Installed $(BINARY_NAME) to $$(go env GOBIN)"
-	@if [ -z "$$(go env GOBIN)" ]; then echo "Installed to $$(go env GOPATH)/bin"; fi
+	@go install -ldflags "$(LDFLAGS)" $(PACKAGE)/cmd/$(BINARY_NAME)
+	@BIN_DIR=$$(go env GOBIN); \
+	if [ -z "$$BIN_DIR" ]; then BIN_DIR=$$(go env GOPATH)/bin; fi; \
+	echo "Installed $(BINARY_NAME) to $$BIN_DIR"; \
+	if ! command -v $(BINARY_NAME) >/dev/null 2>&1; then \
+		echo ""; \
+		echo "⚠️  WARNING: $(BINARY_NAME) is not in your PATH!"; \
+		echo "To fix this, add the following to your shell config (e.g., ~/.zshrc):"; \
+		echo ""; \
+		echo "  export PATH=\"$$BIN_DIR:\$$PATH\""; \
+		echo ""; \
+	elif [ "$$(command -v $(BINARY_NAME))" != "$$BIN_DIR/$(BINARY_NAME)" ]; then \
+		echo ""; \
+		echo "ℹ️  NOTE: A different version of $(BINARY_NAME) is being shadowed by:"; \
+		echo "  $$(command -v $(BINARY_NAME))"; \
+		echo "To use the version you just installed, ensure $$BIN_DIR is earlier in your PATH."; \
+		echo ""; \
+	else \
+		echo "✅ SUCCESS: $(BINARY_NAME) is ready to use!"; \
+	fi
 
 .PHONY: clean
 clean: ## Remove build artifacts
