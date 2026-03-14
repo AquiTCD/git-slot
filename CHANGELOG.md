@@ -5,9 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - 2026-03-13
+## [0.1.1] - 2026-03-14
 
 ### Added
+
+- `-g` shorthand for `--global` flag in `git slot --init`.
+- Proactive `PATH` environment check post-install in `Makefile`.
+
+### Fixed
+
+- Fix `gsl` shell wrapper double execution bug when command fails or returns result.
+- Improve `make install` to correctly handle `GOBIN` and `GOPATH` targets.
+
+## [0.1.0] - 2026-03-13
 
 - TOML-based configuration system with global (`~/.config/git-slot/config.toml`) and project (`git-slot.toml`) hierarchy
 - Slot management: Load, Clear, List, GetPath, Swap, Status operations
