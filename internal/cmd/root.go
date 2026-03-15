@@ -197,7 +197,7 @@ func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
 		return writeJSON(out, jsonSlotList{Slots: items})
 	}
 
-	noColor := !tui.IsTTY(out) || tui.IsNoColor()
+	noColor := tui.IsNoColor()
 	_, _ = fmt.Fprintln(out, tui.RenderSlotList(slots, noColor))
 	return nil
 }
