@@ -1,22 +1,50 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"os"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
+)
 
 var (
-	StyleIcon   = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
-	StyleName   = lipgloss.NewStyle().Bold(true)
-	StyleBranch = lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
-	StyleHash   = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	renderer = lipgloss.DefaultRenderer()
 
-	StyleStateEmpty  = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	StyleStateActive = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
-	StyleStateDirty  = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+	StyleIcon   lipgloss.Style
+	StyleName   lipgloss.Style
+	StyleBranch lipgloss.Style
+	StyleHash   lipgloss.Style
 
-	StyleDirtyMark = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+	StyleStateEmpty  lipgloss.Style
+	StyleStateActive lipgloss.Style
+	StyleStateDirty  lipgloss.Style
 
-	StyleSelected = lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
-	StyleCursor   = lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
+	StyleDirtyMark lipgloss.Style
+
+	StyleSelected lipgloss.Style
+	StyleCursor   lipgloss.Style
 )
+
+func init() {
+	// Force color profile before initializing styles if requested
+	if os.Getenv("CLICOLOR_FORCE") != "" && os.Getenv("CLICOLOR_FORCE") != "0" {
+		renderer.SetColorProfile(termenv.TrueColor)
+	}
+
+	StyleIcon = renderer.NewStyle().Foreground(lipgloss.Color("6"))
+	StyleName = renderer.NewStyle().Bold(true)
+	StyleBranch = renderer.NewStyle().Foreground(lipgloss.Color("4"))
+	StyleHash = renderer.NewStyle().Foreground(lipgloss.Color("8"))
+
+	StyleStateEmpty = renderer.NewStyle().Foreground(lipgloss.Color("8"))
+	StyleStateActive = renderer.NewStyle().Foreground(lipgloss.Color("2"))
+	StyleStateDirty = renderer.NewStyle().Foreground(lipgloss.Color("3"))
+
+	StyleDirtyMark = renderer.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+
+	StyleSelected = renderer.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
+	StyleCursor = renderer.NewStyle().Foreground(lipgloss.Color("5"))
+}
 
 func StateStyle(state string) lipgloss.Style {
 	switch state {
