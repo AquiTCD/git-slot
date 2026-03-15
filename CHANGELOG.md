@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-03-15
+
+### Added
+
+- TOML-configurable fuzzy filter for interactive TUI (`[tui] filter = true`).
+  - Real-time substring filtering by slot name or branch name.
+  - `ctrl+j/k` navigation in filter mode (j/k used for typing).
+- GoReleaser integration for automated multi-platform releases.
+- GitHub Actions release workflow triggered on `v*` tag push.
+- Homebrew tap support via `AquiTCD/homebrew-tap`.
+- `/bump-version` agent workflow for automated release process.
+
+### Changed
+
+- Color output is now always enabled by default. Only `NO_COLOR` environment variable disables it.
+  - Fixes color not displaying when using the `gsl` wrapper.
+- README comprehensively updated: Homebrew install, config examples, command flags, tech stack, gwq acknowledgement.
+
+### Fixed
+
+- Duplicate error messages in CLI output.
+- Missing `-b` alias for `--branch` flag.
+- Error display for unknown slot and branch-in-use scenarios.
+
 ## [0.1.1] - 2026-03-14
 
 ### Added
@@ -39,4 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
+[0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
