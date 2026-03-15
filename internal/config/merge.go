@@ -16,6 +16,7 @@ func Merge(base, override *Config) *Config {
 		SlotsBasePath: base.SlotsBasePath,
 		Slots:         copySlots(base.Slots),
 		Hooks:         base.Hooks,
+		TUI:           base.TUI,
 	}
 
 	if override.GwqBaseDir != "" {
@@ -42,6 +43,10 @@ func Merge(base, override *Config) *Config {
 		merged.Hooks.PostClear = override.Hooks.PostClear
 	}
 
+	if override.TUI.Filter {
+		merged.TUI.Filter = override.TUI.Filter
+	}
+
 	return merged
 }
 
@@ -51,6 +56,7 @@ func copyConfig(src *Config) *Config {
 		SlotsBasePath: src.SlotsBasePath,
 		Slots:         copySlots(src.Slots),
 		Hooks:         src.Hooks,
+		TUI:           src.TUI,
 	}
 	return dst
 }

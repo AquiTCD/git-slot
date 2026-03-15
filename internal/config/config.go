@@ -7,11 +7,16 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
+type TUIConfig struct {
+	Filter bool `toml:"filter"`
+}
+
 type Config struct {
 	GwqBaseDir    string           `toml:"gwq_basedir"`
 	SlotsBasePath string           `toml:"slots_base_path"`
 	Slots         []SlotDefinition `toml:"slots"`
 	Hooks         HooksConfig      `toml:"hooks"`
+	TUI           TUIConfig        `toml:"tui"`
 }
 
 type SlotDefinition struct {

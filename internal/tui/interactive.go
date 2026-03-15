@@ -25,32 +25,56 @@ type Result struct {
 }
 
 type Model struct {
-	slots    []slot.Slot
-	branches []string
-	cursor   int
-	step     step
-	input    textinput.Model
-	result   Result
-	noColor  bool
-	err      error
+	slots         []slot.Slot
+	filteredSlots []slot.Slot
+	branches      []string
+	cursor        int
+	step          step
+	input         textinput.Model
+	filterInput   textinput.Model
+	filterEnabled bool
+	filterQuery   string
+	result        Result
+	noColor       bool
+	err           error
 }
 
-func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Model {
+func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool, filter bool) Model {
 	ti := textinput.New()
 	ti.Placeholder = "branch name (prefix with + to create new)"
 	ti.CharLimit = 256
 	ti.Width = 50
 
-	return Model{
-		slots:    slots,
-		branches: branches,
-		step:     stepSlotSelect,
-		input:    ti,
-		noColor:  noColor,
+	fi := textinput.New()
+	fi.Placeholder = "type to filter..."
+	fi.CharLimit = 128
+	fi.Width = 30
+
+	filtered := make([]slot.Slot, len(slots))
+	copy(filtered, slots)
+
+	m := Model{
+		slots:         slots,
+		filteredSlots: filtered,
+		branches:      branches,
+		step:          stepSlotSelect,
+		input:         ti,
+		filterInput:   fi,
+		filterEnabled: filter,
+		noColor:       noColor,
 	}
+
+	if filter {
+		m.filterInput.Focus()
+	}
+
+	return m
 }
 
 func (m Model) Init() tea.Cmd {
+	if m.filterEnabled {
+		return m.filterInput.Cursor.BlinkCmd()
+	}
 	return nil
 }
 
@@ -68,6 +92,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.filterEnabled {
+		return m.updateSlotSelectWithFilter(msg)
+	}
+	return m.updateSlotSelectSimple(msg)
+}
+
+func (m Model) updateSlotSelectSimple(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "esc", "ctrl+c":
 		m.step = stepAborted
@@ -77,23 +108,84 @@ func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case "down", "j":
-		if m.cursor < len(m.slots)-1 {
+		if m.cursor < len(m.filteredSlots)-1 {
 			m.cursor++
 		}
 	case "enter":
-		selected := m.slots[m.cursor]
-		m.result.SlotName = selected.Name
-
-		if selected.State == slot.SlotActive {
-			m.step = stepDone
-			return m, tea.Quit
-		}
-
-		m.step = stepBranchInput
-		m.input.Focus()
-		return m, m.input.Cursor.BlinkCmd()
+		return m.selectCurrentSlot()
 	}
 	return m, nil
+}
+
+func (m Model) updateSlotSelectWithFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "ctrl+c":
+		m.step = stepAborted
+		return m, tea.Quit
+	case "up", "ctrl+k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+		return m, nil
+	case "down", "ctrl+j":
+		if m.cursor < len(m.filteredSlots)-1 {
+			m.cursor++
+		}
+		return m, nil
+	case "enter":
+		return m.selectCurrentSlot()
+	}
+
+	// Pass other keys to the filter input
+	var cmd tea.Cmd
+	m.filterInput, cmd = m.filterInput.Update(msg)
+
+	newQuery := m.filterInput.Value()
+	if newQuery != m.filterQuery {
+		m.filterQuery = newQuery
+		m.applyFilter()
+	}
+
+	return m, cmd
+}
+
+func (m *Model) applyFilter() {
+	if m.filterQuery == "" {
+		m.filteredSlots = make([]slot.Slot, len(m.slots))
+		copy(m.filteredSlots, m.slots)
+	} else {
+		query := strings.ToLower(m.filterQuery)
+		filtered := make([]slot.Slot, 0)
+		for _, s := range m.slots {
+			name := strings.ToLower(s.Name)
+			branch := strings.ToLower(s.Branch)
+			if strings.Contains(name, query) || strings.Contains(branch, query) {
+				filtered = append(filtered, s)
+			}
+		}
+		m.filteredSlots = filtered
+	}
+	if m.cursor >= len(m.filteredSlots) {
+		m.cursor = max(0, len(m.filteredSlots)-1)
+	}
+}
+
+func (m Model) selectCurrentSlot() (tea.Model, tea.Cmd) {
+	if len(m.filteredSlots) == 0 {
+		return m, nil
+	}
+
+	selected := m.filteredSlots[m.cursor]
+	m.result.SlotName = selected.Name
+
+	if selected.State == slot.SlotActive {
+		m.step = stepDone
+		return m, tea.Quit
+	}
+
+	m.step = stepBranchInput
+	m.input.Focus()
+	return m, m.input.Cursor.BlinkCmd()
 }
 
 func (m Model) updateBranchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -101,6 +193,9 @@ func (m Model) updateBranchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.step = stepSlotSelect
 		m.input.Reset()
+		if m.filterEnabled {
+			m.filterInput.Focus()
+		}
 		return m, nil
 	case "ctrl+c":
 		m.step = stepAborted
@@ -157,7 +252,12 @@ func (m Model) viewSlotSelect() string {
 	var b strings.Builder
 	b.WriteString("Select a slot:\n\n")
 
-	for i, s := range m.slots {
+	if m.filterEnabled {
+		b.WriteString(m.filterInput.View())
+		b.WriteString("\n\n")
+	}
+
+	for i, s := range m.filteredSlots {
 		cursor := "  "
 		if i == m.cursor {
 			if m.noColor {
@@ -199,13 +299,17 @@ func (m Model) viewSlotSelect() string {
 		b.WriteString(line + "\n")
 	}
 
-	b.WriteString("\n↑/↓ or j/k: navigate  enter: select  q/esc: quit")
+	if m.filterEnabled {
+		b.WriteString("\n↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit")
+	} else {
+		b.WriteString("\n↑/↓ or j/k: navigate  enter: select  q/esc: quit")
+	}
 	return b.String()
 }
 
 func (m Model) viewBranchInput() string {
 	var b strings.Builder
-	selected := m.slots[m.cursor]
+	selected := m.filteredSlots[m.cursor]
 
 	name := selected.Name
 	if selected.Icon != "" {
