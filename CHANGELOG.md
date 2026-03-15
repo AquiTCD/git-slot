@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-03-15
+
+### Added
+
+- Interactive slot filter is now enabled by default.
+  - Removed optional `[tui].filter` config in favor of an always-on experience.
+  - Optimized TUI navigation: `ctrl+j/k` always available for selection while typing.
+- Standardized error handling and exit codes via new `errutil` package.
+  - Config errors now return exit code 2.
+  - Git repository detection errors return exit code 3.
+
+### Changed
+
+- Major architectural refactor: Split monolithic CLI logic into separate command files (`cmd_list.go`, `cmd_load.go`, etc.) for better maintainability.
+- Performance optimization: Introduced caching for `git worktree list` calls in `slot.Manager`, reducing redundant Git executions.
+- Environment variable consistency: Renamed internal hook variables to use `GSL_` prefix (e.g., `GSL_SLOT_NAME`), aligning with the recommended `gsl` shorthand.
+
+### Fixed
+
+- Improved color detection logic: Correctly respects `CLICOLOR_FORCE` and forces color output even when terminal detection is ambiguous (e.g., inside shell wrappers).
+
+
 ## [0.2.0] - 2026-03-15
 
 ### Added
@@ -63,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.3.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.3.0
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
