@@ -10,9 +10,11 @@ import (
 )
 
 type Manager struct {
-	cfg      *config.Config
-	basePath string
-	wt       git.Worktree
+	cfg       *config.Config
+	basePath  string
+	wt        git.Worktree
+	worktrees []git.WorktreeInfo
+	fetched   bool
 }
 
 func NewManager(cfg *config.Config, basePath string, wt git.Worktree) *Manager {
@@ -20,7 +22,7 @@ func NewManager(cfg *config.Config, basePath string, wt git.Worktree) *Manager {
 }
 
 func (m *Manager) List() ([]Slot, error) {
-	worktrees, err := m.wt.List()
+	worktrees, err := m.fetchWorktrees()
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +87,7 @@ func (m *Manager) Load(slotName, branchName string, opts LoadOptions) error {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 
-	worktrees, err := m.wt.List()
+	worktrees, err := m.fetchWorktrees()
 	if err != nil {
 		return err
 	}
@@ -112,8 +114,11 @@ func (m *Manager) Load(slotName, branchName string, opts LoadOptions) error {
 			if err := m.wt.Remove(slot.Path, opts.Force); err != nil {
 				return err
 			}
+			m.invalidateCache()
 		}
-		return m.wt.AddNewBranch(slot.Path, branchName)
+		err = m.wt.AddNewBranch(slot.Path, branchName)
+		m.invalidateCache()
+		return err
 	}
 
 	exists, err := m.wt.BranchExists(branchName)
@@ -128,8 +133,11 @@ func (m *Manager) Load(slotName, branchName string, opts LoadOptions) error {
 		if err := m.wt.Remove(slot.Path, opts.Force); err != nil {
 			return err
 		}
+		m.invalidateCache()
 	}
-	return m.wt.Add(slot.Path, branchName)
+	err = m.wt.Add(slot.Path, branchName)
+	m.invalidateCache()
+	return err
 }
 
 type ClearOptions struct {
@@ -150,7 +158,9 @@ func (m *Manager) Clear(slotName string, opts ClearOptions) error {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 
-	return m.wt.Remove(slot.Path, opts.Force)
+	err = m.wt.Remove(slot.Path, opts.Force)
+	m.invalidateCache()
+	return err
 }
 
 func (m *Manager) Swap(slotNameA, slotNameB string) error {
@@ -174,7 +184,9 @@ func (m *Manager) Swap(slotNameA, slotNameB string) error {
 	if err := m.wt.Move(slotB.Path, slotA.Path); err != nil {
 		return err
 	}
-	return m.wt.Move(tempPath, slotB.Path)
+	err = m.wt.Move(tempPath, slotB.Path)
+	m.invalidateCache()
+	return err
 }
 
 type SlotStatus struct {
@@ -259,7 +271,7 @@ func (m *Manager) resolveSlot(name string) (*Slot, error) {
 		Path: slotPath,
 	}
 
-	worktrees, err := m.wt.List()
+	worktrees, err := m.fetchWorktrees()
 	if err != nil {
 		return nil, err
 	}
@@ -292,4 +304,22 @@ func (m *Manager) worktreeLabel(wtPath string) string {
 		}
 	}
 	return wtPath
+}
+
+func (m *Manager) fetchWorktrees() ([]git.WorktreeInfo, error) {
+	if m.fetched {
+		return m.worktrees, nil
+	}
+	wts, err := m.wt.List()
+	if err != nil {
+		return nil, err
+	}
+	m.worktrees = wts
+	m.fetched = true
+	return m.worktrees, nil
+}
+
+func (m *Manager) invalidateCache() {
+	m.fetched = false
+	m.worktrees = nil
 }
