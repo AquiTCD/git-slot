@@ -146,6 +146,22 @@ extra = true
 			},
 		},
 		{
+			name: "tui filter enabled",
+			input: `
+[[slots]]
+name = "dev"
+
+[tui]
+filter = true
+`,
+			expected: &Config{
+				Slots: []SlotDefinition{
+					{Name: "dev"},
+				},
+				TUI: TUIConfig{Filter: true},
+			},
+		},
+		{
 			name:     "empty byte slice returns zero-value Config",
 			input:    "",
 			expected: &Config{},

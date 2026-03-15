@@ -175,6 +175,35 @@ func TestMerge_FullIntegration(t *testing.T) {
 	assert.Equal(t, "echo post-clear", got.Hooks.PostClear)
 }
 
+func TestMerge_TUIFilter(t *testing.T) {
+	t.Run("override filter=true wins over base filter=false", func(t *testing.T) {
+		base := &Config{TUI: TUIConfig{Filter: false}}
+		override := &Config{TUI: TUIConfig{Filter: true}}
+
+		got := Merge(base, override)
+
+		assert.True(t, got.TUI.Filter)
+	})
+
+	t.Run("base filter=true preserved when override has no TUI", func(t *testing.T) {
+		base := &Config{TUI: TUIConfig{Filter: true}}
+		override := &Config{}
+
+		got := Merge(base, override)
+
+		assert.True(t, got.TUI.Filter)
+	})
+
+	t.Run("both false remains false", func(t *testing.T) {
+		base := &Config{}
+		override := &Config{}
+
+		got := Merge(base, override)
+
+		assert.False(t, got.TUI.Filter)
+	})
+}
+
 func TestMerge_DoesNotMutateInputs(t *testing.T) {
 	base := &Config{
 		GwqBaseDir: "/base",

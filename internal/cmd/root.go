@@ -364,7 +364,7 @@ func runInteractive(a *app, out io.Writer) error {
 	branches, _ := wt.ListBranches()
 
 	noColor := tui.IsNoColor()
-	model := tui.NewInteractiveModel(slots, branches, noColor)
+	model := tui.NewInteractiveModel(slots, branches, noColor, a.cfg.TUI.Filter)
 
 	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
 	finalModel, err := p.Run()
