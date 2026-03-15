@@ -32,14 +32,13 @@ type Model struct {
 	step          step
 	input         textinput.Model
 	filterInput   textinput.Model
-	filterEnabled bool
 	filterQuery   string
 	result        Result
 	noColor       bool
 	err           error
 }
 
-func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool, filter bool) Model {
+func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Model {
 	ti := textinput.New()
 	ti.Placeholder = "branch name (prefix with + to create new)"
 	ti.CharLimit = 256
@@ -60,22 +59,16 @@ func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool, fil
 		step:          stepSlotSelect,
 		input:         ti,
 		filterInput:   fi,
-		filterEnabled: filter,
 		noColor:       noColor,
 	}
 
-	if filter {
-		m.filterInput.Focus()
-	}
+	m.filterInput.Focus()
 
 	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	if m.filterEnabled {
-		return m.filterInput.Cursor.BlinkCmd()
-	}
-	return nil
+	return m.filterInput.Cursor.BlinkCmd()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -91,33 +84,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+
 func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.filterEnabled {
-		return m.updateSlotSelectWithFilter(msg)
-	}
-	return m.updateSlotSelectSimple(msg)
-}
-
-func (m Model) updateSlotSelectSimple(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "esc", "ctrl+c":
-		m.step = stepAborted
-		return m, tea.Quit
-	case "up", "k":
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case "down", "j":
-		if m.cursor < len(m.filteredSlots)-1 {
-			m.cursor++
-		}
-	case "enter":
-		return m.selectCurrentSlot()
-	}
-	return m, nil
-}
-
-func (m Model) updateSlotSelectWithFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "ctrl+c":
 		m.step = stepAborted
@@ -193,9 +161,7 @@ func (m Model) updateBranchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.step = stepSlotSelect
 		m.input.Reset()
-		if m.filterEnabled {
-			m.filterInput.Focus()
-		}
+		m.filterInput.Focus()
 		return m, nil
 	case "ctrl+c":
 		m.step = stepAborted
@@ -250,61 +216,62 @@ func (m Model) View() string {
 
 func (m Model) viewSlotSelect() string {
 	var b strings.Builder
-	b.WriteString("Select a slot:\n\n")
-
-	if m.filterEnabled {
-		b.WriteString(m.filterInput.View())
-		b.WriteString("\n\n")
+	prompt := "Select a slot:"
+	if !m.noColor {
+		prompt = StyleSelected.Render(prompt)
 	}
+	b.WriteString(prompt + "\n\n")
+
+	b.WriteString(m.filterInput.View())
+	b.WriteString("\n\n")
 
 	for i, s := range m.filteredSlots {
-		cursor := "  "
-		if i == m.cursor {
-			if m.noColor {
-				cursor = "> "
-			} else {
-				cursor = StyleCursor.Render("> ")
-			}
-		}
-
-		name := s.Name
-		if !m.noColor {
-			if i == m.cursor {
-				name = StyleSelected.Render(name)
-			} else {
-				name = StyleName.Render(name)
-			}
-		}
-
-		icon := ""
-		if s.Icon != "" {
-			icon = s.Icon + " "
-		}
-
-		state := s.DisplayState()
-		stateTag := fmt.Sprintf("[%s]", state)
-		if !m.noColor {
-			stateTag = StateStyle(state).Render(stateTag)
-		}
-
-		line := fmt.Sprintf("%s%s%s  %s", cursor, icon, name, stateTag)
-		if s.State == slot.SlotActive {
-			branch := s.Branch
-			if !m.noColor {
-				branch = StyleBranch.Render(branch)
-			}
-			line += "  " + branch
-		}
-
-		b.WriteString(line + "\n")
+		b.WriteString(renderSlotItem(s, i == m.cursor, m.noColor) + "\n")
 	}
 
-	if m.filterEnabled {
-		b.WriteString("\n↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit")
-	} else {
-		b.WriteString("\n↑/↓ or j/k: navigate  enter: select  q/esc: quit")
-	}
+	b.WriteString("\n↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit")
 	return b.String()
+}
+
+func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {
+	cursor := "  "
+	if isSelected {
+		if noColor {
+			cursor = "> "
+		} else {
+			cursor = StyleCursor.Render("> ")
+		}
+	}
+
+	name := s.Name
+	if !noColor {
+		if isSelected {
+			name = StyleSelected.Render(name)
+		} else {
+			name = StyleName.Render(name)
+		}
+	}
+
+	icon := ""
+	if s.Icon != "" {
+		icon = s.Icon + " "
+	}
+
+	state := s.DisplayState()
+	stateTag := fmt.Sprintf("[%s]", state)
+	if !noColor {
+		stateTag = StateStyle(state).Render(stateTag)
+	}
+
+	line := fmt.Sprintf("%s%s%s  %s", cursor, icon, name, stateTag)
+	if s.State == slot.SlotActive {
+		branch := s.Branch
+		if !noColor {
+			branch = StyleBranch.Render(branch)
+		}
+		line += "  " + branch
+	}
+	return line
 }
 
 func (m Model) viewBranchInput() string {

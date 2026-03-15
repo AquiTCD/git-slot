@@ -4,19 +4,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/AquiTCD/git-slot/internal/errutil"
 	toml "github.com/pelletier/go-toml/v2"
 )
-
-type TUIConfig struct {
-	Filter bool `toml:"filter"`
-}
 
 type Config struct {
 	GwqBaseDir    string           `toml:"gwq_basedir"`
 	SlotsBasePath string           `toml:"slots_base_path"`
 	Slots         []SlotDefinition `toml:"slots"`
 	Hooks         HooksConfig      `toml:"hooks"`
-	TUI           TUIConfig        `toml:"tui"`
 }
 
 type SlotDefinition struct {
@@ -34,7 +30,7 @@ type HooksConfig struct {
 var (
 	ErrNoSlots       = errors.New("no slots defined")
 	ErrEmptySlotName = errors.New("slot name is empty")
-	ErrConfigParse   = errors.New("failed to parse configuration")
+	ErrConfigParse   = errutil.NewExitError("failed to parse configuration", 2)
 )
 
 func ParseTOML(data []byte) (*Config, error) {

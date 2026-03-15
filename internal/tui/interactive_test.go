@@ -27,45 +27,44 @@ func sendSpecialKey(m tea.Model, key tea.KeyType) Model {
 	return updated.(Model)
 }
 
-// --- Tests without filter (filter=false) ---
+// --- Navigation Tests ---
 
 func TestNewInteractiveModel(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
+	m := NewInteractiveModel(testSlots(), nil, true)
 	assert.Equal(t, 0, m.cursor)
 	assert.Equal(t, stepSlotSelect, m.step)
-	assert.False(t, m.filterEnabled)
 }
 
 func TestSlotSelect_MoveDown(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	m2 := sendKey(m, "j")
+	m := NewInteractiveModel(testSlots(), nil, true)
+	m2 := sendSpecialKey(m, tea.KeyDown)
 	assert.Equal(t, 1, m2.cursor)
 }
 
 func TestSlotSelect_MoveUp(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	m2 := sendKey(m, "j")
-	m3 := sendKey(m2, "k")
+	m := NewInteractiveModel(testSlots(), nil, true)
+	m2 := sendSpecialKey(m, tea.KeyDown)
+	m3 := sendSpecialKey(m2, tea.KeyUp)
 	assert.Equal(t, 0, m3.cursor)
 }
 
 func TestSlotSelect_BoundsTop(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	m2 := sendKey(m, "k")
+	m := NewInteractiveModel(testSlots(), nil, true)
+	m2 := sendSpecialKey(m, tea.KeyUp)
 	assert.Equal(t, 0, m2.cursor)
 }
 
 func TestSlotSelect_BoundsBottom(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	m2 := sendKey(m, "j")
-	m3 := sendKey(m2, "j")
-	m4 := sendKey(m3, "j")
+	m := NewInteractiveModel(testSlots(), nil, true)
+	m2 := sendSpecialKey(m, tea.KeyDown)
+	m3 := sendSpecialKey(m2, tea.KeyDown)
+	m4 := sendSpecialKey(m3, tea.KeyDown)
 	assert.Equal(t, 2, m4.cursor)
 }
 
 func TestSlotSelect_EnterOnActive_DirectDone(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	m2 := sendKey(m, "j")
+	m := NewInteractiveModel(testSlots(), nil, true)
+	m2 := sendSpecialKey(m, tea.KeyDown)
 	m3 := sendSpecialKey(m2, tea.KeyEnter)
 	result, ok := m3.GetResult()
 	require.True(t, ok)
@@ -74,33 +73,27 @@ func TestSlotSelect_EnterOnActive_DirectDone(t *testing.T) {
 }
 
 func TestSlotSelect_EnterOnEmpty_GoesToBranchInput(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
+	m := NewInteractiveModel(testSlots(), nil, true)
 	m2 := sendSpecialKey(m, tea.KeyEnter)
 	assert.Equal(t, stepBranchInput, m2.step)
 	assert.Equal(t, "wood", m2.result.SlotName)
 }
 
-func TestSlotSelect_Quit(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	m2 := sendKey(m, "q")
-	assert.True(t, m2.Aborted())
-}
-
 func TestSlotSelect_Esc(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
+	m := NewInteractiveModel(testSlots(), nil, true)
 	m2 := sendSpecialKey(m, tea.KeyEsc)
 	assert.True(t, m2.Aborted())
 }
 
 func TestBranchInput_Esc_BackToSlotSelect(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
+	m := NewInteractiveModel(testSlots(), nil, true)
 	m2 := sendSpecialKey(m, tea.KeyEnter)
 	m3 := sendSpecialKey(m2, tea.KeyEsc)
 	assert.Equal(t, stepSlotSelect, m3.step)
 }
 
 func TestView_SlotSelect(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
+	m := NewInteractiveModel(testSlots(), nil, true)
 	view := m.View()
 	assert.Contains(t, view, "Select a slot:")
 	assert.Contains(t, view, "wood")
@@ -110,7 +103,7 @@ func TestView_SlotSelect(t *testing.T) {
 }
 
 func TestView_BranchInput(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
+	m := NewInteractiveModel(testSlots(), nil, true)
 	m2 := sendSpecialKey(m, tea.KeyEnter)
 	view := m2.View()
 	assert.Contains(t, view, "Slot: 🌱 wood")
@@ -118,23 +111,22 @@ func TestView_BranchInput(t *testing.T) {
 }
 
 func TestView_WithColor(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, false, false)
+	m := NewInteractiveModel(testSlots(), nil, false)
 	view := m.View()
 	assert.Contains(t, view, "wood")
 }
 
-// --- Tests with filter (filter=true) ---
+// --- Tests with filter ---
 
-func TestFilter_Enabled_ShowsFilterInput(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, true)
-	assert.True(t, m.filterEnabled)
+func TestFilter_ShowsFilterInput(t *testing.T) {
+	m := NewInteractiveModel(testSlots(), nil, true)
 	view := m.View()
 	assert.Contains(t, view, "type to filter...")
 	assert.Contains(t, view, "ctrl+j/k")
 }
 
-func TestFilter_Enabled_FiltersByName(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, true)
+func TestFilter_FiltersByName(t *testing.T) {
+	m := NewInteractiveModel(testSlots(), nil, true)
 	// Type "fir" to filter
 	m2 := sendKey(m, "f")
 	m3 := sendKey(m2, "i")
@@ -143,8 +135,8 @@ func TestFilter_Enabled_FiltersByName(t *testing.T) {
 	assert.Equal(t, "fire", m4.filteredSlots[0].Name)
 }
 
-func TestFilter_Enabled_FiltersByBranch(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, true)
+func TestFilter_FiltersByBranch(t *testing.T) {
+	m := NewInteractiveModel(testSlots(), nil, true)
 	// Type "feature" to match branch
 	for _, ch := range "feature" {
 		m = sendKey(m, string(ch))
@@ -153,16 +145,16 @@ func TestFilter_Enabled_FiltersByBranch(t *testing.T) {
 	assert.Equal(t, "fire", m.filteredSlots[0].Name)
 }
 
-func TestFilter_Enabled_EmptyResult(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, true)
+func TestFilter_EmptyResult(t *testing.T) {
+	m := NewInteractiveModel(testSlots(), nil, true)
 	for _, ch := range "zzz" {
 		m = sendKey(m, string(ch))
 	}
 	assert.Empty(t, m.filteredSlots)
 }
 
-func TestFilter_Enabled_EnterOnEmpty_Noop(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, true)
+func TestFilter_EnterOnEmpty_Noop(t *testing.T) {
+	m := NewInteractiveModel(testSlots(), nil, true)
 	for _, ch := range "zzz" {
 		m = sendKey(m, string(ch))
 	}
@@ -171,8 +163,8 @@ func TestFilter_Enabled_EnterOnEmpty_Noop(t *testing.T) {
 	assert.Equal(t, stepSlotSelect, m2.step)
 }
 
-func TestFilter_Enabled_CursorClamped(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, true)
+func TestFilter_CursorClamped(t *testing.T) {
+	m := NewInteractiveModel(testSlots(), nil, true)
 	// Move cursor to last item (index 2)
 	m = sendSpecialKey(m, tea.KeyDown)
 	m = sendSpecialKey(m, tea.KeyDown)
@@ -183,11 +175,4 @@ func TestFilter_Enabled_CursorClamped(t *testing.T) {
 	m = sendKey(m, "r")
 	assert.Equal(t, 0, m.cursor)
 	assert.Len(t, m.filteredSlots, 1)
-}
-
-func TestFilter_Disabled_NoFilterView(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, false)
-	view := m.View()
-	assert.NotContains(t, view, "type to filter...")
-	assert.Contains(t, view, "j/k")
 }

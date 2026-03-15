@@ -34,10 +34,6 @@ name = "slot-3"
 # [hooks]
 # post_load = ".git-slot/hooks/post-load.sh"
 # post_clear = ".git-slot/hooks/post-clear.sh"
-
-# Optional: TUI settings
-# [tui]
-# filter = true   # Enable fuzzy filter in interactive mode (default: false)
 `
 
 type InitOptions struct {
