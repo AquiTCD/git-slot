@@ -72,6 +72,12 @@ vet: ## Run go vet
 lint: ## Run golangci-lint
 	golangci-lint run
 
+## Release
+
+.PHONY: release-snapshot
+release-snapshot: ## Build snapshot with goreleaser (local test)
+	goreleaser build --snapshot --clean
+
 ## All-in-one
 
 .PHONY: check

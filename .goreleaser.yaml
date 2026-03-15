@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/git-slot
+    binary: git-slot
+    ldflags:
+      - -s -w
+      - -X github.com/AquiTCD/git-slot/internal/cmd.version={{.Version}}
+      - -X github.com/AquiTCD/git-slot/internal/cmd.commit={{.ShortCommit}}
+      - -X github.com/AquiTCD/git-slot/internal/cmd.date={{.Date}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^style:"
+
+brews:
+  - repository:
+      owner: AquiTCD
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/AquiTCD/git-slot
+    description: Manage git worktrees as fixed, named slots
+    license: MIT
+    install: |
+      bin.install "git-slot"
+    test: |
+      system "#{bin}/git-slot", "--version"
+    extra_install: |-
+      generate_completions_from_executable(bin/"git-slot", "completion")
