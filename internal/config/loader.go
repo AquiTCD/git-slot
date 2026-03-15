@@ -1,13 +1,14 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/AquiTCD/git-slot/internal/errutil"
 )
 
-var ErrNoConfig = errors.New("no configuration file found; run `git slot --init` to create one")
+var ErrNoConfig = errutil.NewExitError("no configuration file found; run `git slot --init` to create one", 2)
 
 type LoadOptions struct {
 	GlobalPath  string

@@ -1,12 +1,13 @@
 package git
 
 import (
-	"errors"
 	"os/exec"
 	"strings"
+
+	"github.com/AquiTCD/git-slot/internal/errutil"
 )
 
-var ErrNotInRepo = errors.New("not inside a git repository")
+var ErrNotInRepo = errutil.NewExitError("not inside a git repository", 3)
 
 type Detector interface {
 	RepoRoot() (string, error)
