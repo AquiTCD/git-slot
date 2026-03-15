@@ -60,11 +60,11 @@ func (r *Runner) Run(scriptPath string, env HookEnv) error {
 	cmd.Stdout = r.stdout
 	cmd.Stderr = r.stderr
 	cmd.Env = append(os.Environ(),
-		"GS_SLOT_NAME="+env.SlotName,
-		"GS_SLOT_PATH="+env.SlotPath,
-		"GS_BRANCH="+env.Branch,
-		"GS_REPO_ROOT="+env.RepoRoot,
-		"GS_ACTION="+env.Action,
+		"GSL_SLOT_NAME="+env.SlotName,
+		"GSL_SLOT_PATH="+env.SlotPath,
+		"GSL_BRANCH="+env.Branch,
+		"GSL_REPO_ROOT="+env.RepoRoot,
+		"GSL_ACTION="+env.Action,
 	)
 
 	if err := cmd.Run(); err != nil {

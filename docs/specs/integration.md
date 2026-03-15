@@ -74,11 +74,11 @@ post_clear = ".git-slot/hooks/post-clear.sh"
 
 | 環境変数 | 説明 | 例 |
 |----------|------|-----|
-| `GS_SLOT_NAME` | スロット名 | `main-work` |
-| `GS_SLOT_PATH` | スロットの絶対パス | `/home/user/src/.../slots/main-work` |
-| `GS_BRANCH` | ブランチ名 | `feature/nice-ui` |
-| `GS_REPO_ROOT` | ベースリポジトリのルート | `/home/user/src/.../repo` |
-| `GS_ACTION` | 実行中のアクション | `load` / `clear` |
+| `GSL_SLOT_NAME` | スロット名 | `main-work` |
+| `GSL_SLOT_PATH` | スロットの絶対パス | `/home/user/src/.../slots/main-work` |
+| `GSL_BRANCH` | ブランチ名 | `feature/nice-ui` |
+| `GSL_REPO_ROOT` | ベースリポジトリのルート | `/home/user/src/.../repo` |
+| `GSL_ACTION` | 実行中のアクション | `load` / `clear` |
 
 #### 実行ルール
 

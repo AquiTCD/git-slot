@@ -76,11 +76,11 @@ func TestRun_FailedExitCode(t *testing.T) {
 func TestRun_EnvVarsSet(t *testing.T) {
 	dir := t.TempDir()
 	path := writeScript(t, dir, "env.sh", `
-echo "SLOT_NAME=$GS_SLOT_NAME"
-echo "SLOT_PATH=$GS_SLOT_PATH"
-echo "BRANCH=$GS_BRANCH"
-echo "REPO_ROOT=$GS_REPO_ROOT"
-echo "ACTION=$GS_ACTION"
+echo "SLOT_NAME=$GSL_SLOT_NAME"
+echo "SLOT_PATH=$GSL_SLOT_PATH"
+echo "BRANCH=$GSL_BRANCH"
+echo "REPO_ROOT=$GSL_REPO_ROOT"
+echo "ACTION=$GSL_ACTION"
 `)
 
 	var stdout bytes.Buffer
