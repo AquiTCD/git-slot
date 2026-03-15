@@ -1,0 +1,95 @@
+package cmd
+
+import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/AquiTCD/git-slot/internal/git"
+	"github.com/AquiTCD/git-slot/internal/hook"
+	"github.com/AquiTCD/git-slot/internal/pathutil"
+	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/AquiTCD/git-slot/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writer) error {
+	hookRunner := hook.NewRunner(out, os.Stderr)
+	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
+
+	env := hook.HookEnv{
+		SlotName: slotName,
+		SlotPath: slotPath,
+		Branch:   branchName,
+		RepoRoot: a.repoRoot,
+		Action:   "load",
+	}
+
+	if err := hookRunner.Run(a.cfg.Hooks.PreLoad, env); err != nil {
+		return fmt.Errorf("pre_load hook: %w", err)
+	}
+
+	if err := a.mgr.Load(slotName, branchName, slot.LoadOptions{
+		CreateBranch: createBranch,
+		Force:        flagForce,
+	}); err != nil {
+		return err
+	}
+
+	if err := hookRunner.Run(a.cfg.Hooks.PostLoad, env); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_load hook: %v\n", err)
+	}
+
+	path, _ := a.mgr.GetPath(slotName)
+	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is ready.\n", slotName)
+	_, _ = fmt.Fprintln(out, path)
+	return nil
+}
+
+func runGetPath(mgr *slot.Manager, slotName string, out io.Writer) error {
+	path, err := mgr.GetPath(slotName)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintln(out, path)
+	return nil
+}
+
+func runInteractive(a *app, out io.Writer) error {
+	slots, err := a.mgr.List()
+	if err != nil {
+		return err
+	}
+	if len(slots) == 0 {
+		_, _ = fmt.Fprintln(out, "No slots defined.")
+		return nil
+	}
+
+	wt := git.NewExecWorktree(a.repoRoot)
+	branches, _ := wt.ListBranches()
+
+	noColor := tui.IsNoColor()
+	model := tui.NewInteractiveModel(slots, branches, noColor)
+
+	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
+	finalModel, err := p.Run()
+	if err != nil {
+		return fmt.Errorf("interactive mode: %w", err)
+	}
+
+	m := finalModel.(tui.Model)
+	if m.Aborted() {
+		return nil
+	}
+
+	result, ok := m.GetResult()
+	if !ok {
+		return nil
+	}
+
+	if result.BranchName == "" {
+		return runGetPath(a.mgr, result.SlotName, out)
+	}
+
+	return runLoad(a, result.SlotName, result.BranchName, result.CreateBranch, out)
+}

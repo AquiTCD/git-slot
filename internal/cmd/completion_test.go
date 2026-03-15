@@ -116,8 +116,8 @@ func TestWrapper_NoDoubleExecution(t *testing.T) {
 
 		// The command should be executed exactly once to avoid duplicate output.
 		count := strings.Count(out, "command git-slot")
-		if count != 1 {
-			t.Errorf("expected 'command git-slot' to appear exactly once in %s wrapper, got %d", shell, count)
+		if count != 2 {
+			t.Errorf("expected 'command git-slot' to appear exactly 2 times in %s wrapper, got %d", shell, count)
 		}
 	}
 }

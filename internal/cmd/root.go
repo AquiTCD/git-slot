@@ -3,16 +3,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/AquiTCD/git-slot/internal/git"
-	"github.com/AquiTCD/git-slot/internal/hook"
+	"github.com/AquiTCD/git-slot/internal/errutil"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
@@ -183,211 +181,6 @@ func bootstrap() (*app, error) {
 	}, nil
 }
 
-func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
-	slots, err := mgr.List()
-	if err != nil {
-		return err
-	}
-
-	if useJSON {
-		items := make([]jsonSlot, len(slots))
-		for i, s := range slots {
-			items[i] = slotToJSON(s)
-		}
-		return writeJSON(out, jsonSlotList{Slots: items})
-	}
-
-	noColor := tui.IsNoColor()
-	_, _ = fmt.Fprintln(out, tui.RenderSlotList(slots, noColor))
-	return nil
-}
-
-func runClear(a *app, slotName string, out io.Writer) error {
-	hookRunner := hook.NewRunner(out, os.Stderr)
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-
-	env := hook.HookEnv{
-		SlotName: slotName,
-		SlotPath: slotPath,
-		RepoRoot: a.repoRoot,
-		Action:   "clear",
-	}
-
-	if err := hookRunner.Run(a.cfg.Hooks.PreClear, env); err != nil {
-		return fmt.Errorf("pre_clear hook: %w", err)
-	}
-
-	if err := a.mgr.Clear(slotName, slot.ClearOptions{Force: flagForce}); err != nil {
-		return err
-	}
-
-	if err := hookRunner.Run(a.cfg.Hooks.PostClear, env); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_clear hook: %v\n", err)
-	}
-
-	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is now empty.\n", slotName)
-	return nil
-}
-
-func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writer) error {
-	hookRunner := hook.NewRunner(out, os.Stderr)
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-
-	env := hook.HookEnv{
-		SlotName: slotName,
-		SlotPath: slotPath,
-		Branch:   branchName,
-		RepoRoot: a.repoRoot,
-		Action:   "load",
-	}
-
-	if err := hookRunner.Run(a.cfg.Hooks.PreLoad, env); err != nil {
-		return fmt.Errorf("pre_load hook: %w", err)
-	}
-
-	if err := a.mgr.Load(slotName, branchName, slot.LoadOptions{
-		CreateBranch: createBranch,
-		Force:        flagForce,
-	}); err != nil {
-		return err
-	}
-
-	if err := hookRunner.Run(a.cfg.Hooks.PostLoad, env); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_load hook: %v\n", err)
-	}
-
-	path, _ := a.mgr.GetPath(slotName)
-	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is ready.\n", slotName)
-	_, _ = fmt.Fprintln(out, path)
-	return nil
-}
-
-func runGetPath(mgr *slot.Manager, slotName string, out io.Writer) error {
-	path, err := mgr.GetPath(slotName)
-	if err != nil {
-		return err
-	}
-	_, _ = fmt.Fprintln(out, path)
-	return nil
-}
-
-func runSwap(mgr *slot.Manager, swapArgs []string, out io.Writer) error {
-	if len(swapArgs) != 2 {
-		return fmt.Errorf("--swap requires exactly 2 slot names")
-	}
-	if err := mgr.Swap(swapArgs[0], swapArgs[1]); err != nil {
-		return err
-	}
-	_, _ = fmt.Fprintf(os.Stderr, "Swapped slots '%s' and '%s'.\n", swapArgs[0], swapArgs[1])
-	return nil
-}
-
-func runStatus(mgr *slot.Manager, slotName string, out io.Writer, useJSON bool) error {
-	if slotName == "" {
-		statuses, err := mgr.StatusAll()
-		if err != nil {
-			return err
-		}
-		if useJSON {
-			items := make([]jsonSlotStatus, len(statuses))
-			for i, s := range statuses {
-				items[i] = statusToJSON(s)
-			}
-			return writeJSON(out, items)
-		}
-		for i, st := range statuses {
-			if i > 0 {
-				_, _ = fmt.Fprintln(out)
-			}
-			printSlotStatus(st, out)
-		}
-		return nil
-	}
-
-	st, err := mgr.Status(slotName)
-	if err != nil {
-		return err
-	}
-	if useJSON {
-		return writeJSON(out, statusToJSON(*st))
-	}
-	printSlotStatus(*st, out)
-	return nil
-}
-
-func printSlotStatus(st slot.SlotStatus, out io.Writer) {
-	_, _ = fmt.Fprintf(out, "Slot:    %s\n", st.Name)
-	_, _ = fmt.Fprintf(out, "State:   %s\n", st.DisplayState())
-	if st.State == slot.SlotActive {
-		_, _ = fmt.Fprintf(out, "Branch:  %s\n", st.Branch)
-		_, _ = fmt.Fprintf(out, "HEAD:    %s", st.HeadHash)
-		if st.CommitSubject != "" {
-			_, _ = fmt.Fprintf(out, " (%s)", st.CommitSubject)
-		}
-		_, _ = fmt.Fprintln(out)
-		_, _ = fmt.Fprintf(out, "Path:    %s\n", st.Path)
-		if len(st.Changes) > 0 {
-			_, _ = fmt.Fprintln(out, "Changes:")
-			for _, c := range st.Changes {
-				_, _ = fmt.Fprintf(out, "  %s\n", c)
-			}
-		}
-	}
-}
-
-func runInit(out io.Writer) error {
-	detector := git.NewExecDetector("")
-	repoRoot, _ := detector.RepoRoot()
-
-	path, err := config.Init(config.InitOptions{
-		Global: flagGlobal,
-		Force:  flagForce,
-	}, repoRoot)
-	if err != nil {
-		return err
-	}
-	_, _ = fmt.Fprintf(os.Stderr, "Created %s with template configuration.\n", path)
-	return nil
-}
-
-func runInteractive(a *app, out io.Writer) error {
-	slots, err := a.mgr.List()
-	if err != nil {
-		return err
-	}
-	if len(slots) == 0 {
-		_, _ = fmt.Fprintln(out, "No slots defined.")
-		return nil
-	}
-
-	wt := git.NewExecWorktree(a.repoRoot)
-	branches, _ := wt.ListBranches()
-
-	noColor := tui.IsNoColor()
-	model := tui.NewInteractiveModel(slots, branches, noColor, a.cfg.TUI.Filter)
-
-	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
-	finalModel, err := p.Run()
-	if err != nil {
-		return fmt.Errorf("interactive mode: %w", err)
-	}
-
-	m := finalModel.(tui.Model)
-	if m.Aborted() {
-		return nil
-	}
-
-	result, ok := m.GetResult()
-	if !ok {
-		return nil
-	}
-
-	if result.BranchName == "" {
-		return runGetPath(a.mgr, result.SlotName, out)
-	}
-
-	return runLoad(a, result.SlotName, result.BranchName, result.CreateBranch, out)
-}
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
@@ -400,11 +193,9 @@ func mapExitCode(err error) int {
 	if err == nil {
 		return 0
 	}
-	if errors.Is(err, config.ErrNoConfig) || errors.Is(err, config.ErrConfigParse) {
-		return 2
-	}
-	if errors.Is(err, git.ErrNotInRepo) {
-		return 3
+	var ex errutil.ExitError
+	if errors.As(err, &ex) {
+		return ex.ExitCode()
 	}
 	return 1
 }

@@ -60,13 +60,13 @@ var wrapperCmd = &cobra.Command{
 	Long: `Generate a shell wrapper function "gsl" that calls git-slot and
 automatically cd's into the slot directory on success.
 
-Add to your shell config:
+To enable this, add the following to your shell config file:
 
-Bash / Zsh:
-  $ eval "$(git-slot wrapper zsh)"
+Bash / Zsh (~/.zshrc or ~/.bashrc):
+  eval "$(git-slot wrapper zsh)"
 
-Fish:
-  $ git-slot wrapper fish | source
+Fish (~/.config/fish/config.fish):
+  git-slot wrapper fish | source
 `,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish"},
@@ -86,7 +86,13 @@ Fish:
 func writeShWrapper(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `gsl() {
   local result
-  result=$(command git-slot "$@" </dev/tty)
+  # Force color output even when captured in a variable,
+  # but only if NO_COLOR is not set.
+  if [ -z "$NO_COLOR" ]; then
+    result=$(CLICOLOR_FORCE=1 command git-slot "$@" </dev/tty)
+  else
+    result=$(command git-slot "$@" </dev/tty)
+  fi
   local rc=$?
   if [ $rc -eq 0 ]; then
     if [ -n "$result" ] && [ -d "$result" ]; then
@@ -103,13 +109,18 @@ func writeShWrapper(w io.Writer) error {
 
 func writeFishWrapper(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `function gsl
-  set -l result (command git-slot $argv </dev/tty)
+  set -l result
+  if not set -q NO_COLOR
+    set result (env CLICOLOR_FORCE=1 command git-slot $argv </dev/tty)
+  else
+    set result (command git-slot $argv </dev/tty)
+  end
   set -l rc $status
   if test $rc -eq 0
-    if test -n "$result"; and test -d "$result"
-      cd "$result"
+    if test -n "$result"; and test -d "$result[1]"
+      cd "$result[1]"
     else if test -n "$result"
-      printf "%%s\n" "$result"
+      printf "%%s\n" $result
     end
   end
   return $rc
