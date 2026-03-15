@@ -37,6 +37,15 @@ install: ## Install binary to $GOBIN or $GOPATH/bin
 		echo ""; \
 	else \
 		echo "✅ SUCCESS: $(BINARY_NAME) is ready to use!"; \
+		echo ""; \
+		echo "To enable the 'gsl' wrapper (cd into slot automatically), add this to your shell config:"; \
+		echo ""; \
+		echo "  # Bash / Zsh (~/.zshrc or ~/.bashrc)"; \
+		echo "  eval \"\$$($(BINARY_NAME) wrapper zsh)\""; \
+		echo ""; \
+		echo "  # Fish (~/.config/fish/config.fish)"; \
+		echo "  $(BINARY_NAME) wrapper fish | source"; \
+		echo ""; \
 	fi
 
 .PHONY: clean

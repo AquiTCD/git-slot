@@ -16,6 +16,9 @@ func IsTTY(w io.Writer) bool {
 }
 
 func IsNoColor() bool {
+	if os.Getenv("CLICOLOR_FORCE") != "" && os.Getenv("CLICOLOR_FORCE") != "0" {
+		return false
+	}
 	_, ok := os.LookupEnv("NO_COLOR")
 	return ok
 }
