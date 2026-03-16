@@ -16,7 +16,6 @@ func TestParseTOML(t *testing.T) {
 		{
 			name: "full valid TOML with all fields",
 			input: `
-gwq_basedir = "~/worktrees"
 slots_base_path = "/custom/path"
 
 [[slots]]
@@ -26,23 +25,22 @@ name = "main-work"
 name = "hotfix"
 
 [hooks]
-pre_load = "scripts/pre.sh"
-post_load = "scripts/post.sh"
-pre_clear = "scripts/pre-clear.sh"
-post_clear = "scripts/post-clear.sh"
+pre_mount = [{type = "run", command = "scripts/pre.sh"}]
+post_mount = [{type = "run", command = "scripts/post.sh"}]
+pre_clear = [{type = "run", command = "scripts/pre-clear.sh"}]
+post_clear = [{type = "run", command = "scripts/post-clear.sh"}]
 `,
 			expected: &Config{
-				GwqBaseDir:    "~/worktrees",
 				SlotsBasePath: "/custom/path",
 				Slots: []SlotDefinition{
 					{Name: "main-work"},
 					{Name: "hotfix"},
 				},
 				Hooks: HooksConfig{
-					PreLoad:   "scripts/pre.sh",
-					PostLoad:  "scripts/post.sh",
-					PreClear:  "scripts/pre-clear.sh",
-					PostClear: "scripts/post-clear.sh",
+					PreMount:  []HookAction{{Type: "run", Command: "scripts/pre.sh"}},
+					PostMount: []HookAction{{Type: "run", Command: "scripts/post.sh"}},
+					PreClear:  []HookAction{{Type: "run", Command: "scripts/pre-clear.sh"}},
+					PostClear: []HookAction{{Type: "run", Command: "scripts/post-clear.sh"}},
 				},
 			},
 		},
@@ -55,21 +53,6 @@ name = "work"
 			expected: &Config{
 				Slots: []SlotDefinition{
 					{Name: "work"},
-				},
-			},
-		},
-		{
-			name: "gwq_basedir and slots only",
-			input: `
-gwq_basedir = "~/trees"
-
-[[slots]]
-name = "dev"
-`,
-			expected: &Config{
-				GwqBaseDir: "~/trees",
-				Slots: []SlotDefinition{
-					{Name: "dev"},
 				},
 			},
 		},
@@ -89,20 +72,20 @@ name = "feature"
 			},
 		},
 		{
-			name: "partial hooks with only post_load",
+			name: "partial hooks with only post_mount",
 			input: `
 [[slots]]
 name = "dev"
 
 [hooks]
-post_load = "run.sh"
+post_mount = [{type = "run", command = "run.sh"}]
 `,
 			expected: &Config{
 				Slots: []SlotDefinition{
 					{Name: "dev"},
 				},
 				Hooks: HooksConfig{
-					PostLoad: "run.sh",
+					PostMount: []HookAction{{Type: "run", Command: "run.sh"}},
 				},
 			},
 		},
@@ -132,14 +115,14 @@ name = "plain"
 			name: "unknown keys silently ignored",
 			input: `
 unknown_key = "whatever"
-gwq_basedir = "~/wt"
+slots_base_path = "~/wt"
 
 [[slots]]
 name = "s1"
 extra = true
 `,
 			expected: &Config{
-				GwqBaseDir: "~/wt",
+				SlotsBasePath: "~/wt",
 				Slots: []SlotDefinition{
 					{Name: "s1"},
 				},

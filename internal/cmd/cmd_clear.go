@@ -22,7 +22,7 @@ func runClear(a *app, slotName string, out io.Writer) error {
 	}
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreClear, env); err != nil {
-		return fmt.Errorf("pre_clear hook: %w", err)
+		return fmt.Errorf("pre-clear hook: %w", err)
 	}
 
 	if err := a.mgr.Clear(slotName, slot.ClearOptions{Force: flagForce}); err != nil {
@@ -30,7 +30,7 @@ func runClear(a *app, slotName string, out io.Writer) error {
 	}
 
 	if err := hookRunner.Run(a.cfg.Hooks.PostClear, env); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_clear hook: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: post-clear hook: %v\n", err)
 	}
 
 	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is now empty.\n", slotName)

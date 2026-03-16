@@ -27,6 +27,7 @@ var (
 	flagJSON    bool
 	flagVersion bool
 	flagEject   bool
+	flagHook    bool
 )
 
 var rootCmd = &cobra.Command{
@@ -44,6 +45,7 @@ Management flags:
   git slot -d, --clear <slot>    Clear (remove) a slot's worktree
   git slot -s, --swap <A> <B>    Swap branches between two slots
   git slot -e, --eject           Print the repository root path (use with gsl to cd back)
+  git slot --hook               Open interactive TUI to setup post-mount hooks (use --global for global config)
   git slot --status [slot]       Show detailed slot status
   git slot --init                Generate a template config file`,
 	SilenceUsage:          true,
@@ -60,7 +62,8 @@ func init() {
 	rootCmd.Flags().StringSliceVarP(&flagSwap, "swap", "s", nil, "Swap branches between two slots")
 	rootCmd.Flags().StringVar(&flagStatus, "status", "", "Show detailed slot status")
 	rootCmd.Flags().BoolVar(&flagInit, "init", false, "Generate a template config file")
-	rootCmd.Flags().BoolVarP(&flagGlobal, "global", "g", false, "Used with --init to generate global config")
+	rootCmd.Flags().BoolVar(&flagHook, "hook", false, "Open interactive TUI to setup post-mount hooks")
+	rootCmd.Flags().BoolVarP(&flagGlobal, "global", "g", false, "Used with --init or --hook to target global config")
 	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and load into slot")
 	rootCmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Alias for --create")
 	rootCmd.Flags().BoolVar(&flagForce, "force", false, "Skip confirmation for destructive actions")
@@ -68,7 +71,6 @@ func init() {
 	rootCmd.Flags().BoolVar(&flagJSON, "json", false, "Output in JSON format")
 	rootCmd.Flags().BoolVar(&flagVersion, "version", false, "Print version information")
 
-	_ = rootCmd.Flags().MarkHidden("global")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -81,6 +83,14 @@ func run(cmd *cobra.Command, args []string) error {
 
 	if flagInit {
 		return runInit(out)
+	}
+
+	if flagHook {
+		a, err := bootstrap()
+		if err != nil {
+			return err
+		}
+		return runHookHelper(a, out, flagGlobal)
 	}
 
 	if flagEject {

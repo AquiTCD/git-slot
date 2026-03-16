@@ -18,7 +18,7 @@ func writeTempConfig(t *testing.T, dir, filename, content string) string {
 }
 
 const globalTOML = `
-gwq_basedir = "~/worktrees"
+slots_base_path = "~/worktrees"
 
 [[slots]]
 name = "dev"
@@ -27,19 +27,19 @@ name = "dev"
 name = "staging"
 
 [hooks]
-pre_load = "global-pre.sh"
-post_load = "global-post.sh"
+pre_mount = [{type = "run", command = "global-pre.sh"}]
+post_mount = [{type = "run", command = "global-post.sh"}]
 `
 
 const projectTOML = `
-gwq_basedir = "~/project-trees"
+slots_base_path = "~/project-trees"
 
 [[slots]]
 name = "feature"
 
 [hooks]
-post_load = "project-post.sh"
-pre_clear = "project-pre-clear.sh"
+post_mount = [{type = "run", command = "project-post.sh"}]
+pre_clear = [{type = "run", command = "project-pre-clear.sh"}]
 `
 
 func TestLoadConfig_BothExist(t *testing.T) {
@@ -50,11 +50,12 @@ func TestLoadConfig_BothExist(t *testing.T) {
 	cfg, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
 	require.NoError(t, err)
 
-	assert.Equal(t, "~/project-trees", cfg.GwqBaseDir)
-	assert.Equal(t, []SlotDefinition{{Name: "feature"}}, cfg.Slots)
-	assert.Equal(t, "global-pre.sh", cfg.Hooks.PreLoad)
-	assert.Equal(t, "project-post.sh", cfg.Hooks.PostLoad)
-	assert.Equal(t, "project-pre-clear.sh", cfg.Hooks.PreClear)
+	assert.Equal(t, "~/project-trees", cfg.SlotsBasePath)
+	// Now slots are merged/appended
+	assert.ElementsMatch(t, []SlotDefinition{{Name: "dev"}, {Name: "staging"}, {Name: "feature"}}, cfg.Slots)
+	assert.Equal(t, []HookAction{{Type: "run", Command: "global-pre.sh"}}, cfg.Hooks.PreMount)
+	assert.Equal(t, []HookAction{{Type: "run", Command: "project-post.sh"}}, cfg.Hooks.PostMount)
+	assert.Equal(t, []HookAction{{Type: "run", Command: "project-pre-clear.sh"}}, cfg.Hooks.PreClear)
 }
 
 func TestLoadConfig_OnlyGlobal(t *testing.T) {
@@ -67,8 +68,8 @@ func TestLoadConfig_OnlyGlobal(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, "~/worktrees", cfg.GwqBaseDir)
-	assert.Equal(t, []SlotDefinition{{Name: "dev"}, {Name: "staging"}}, cfg.Slots)
+	assert.Equal(t, "~/worktrees", cfg.SlotsBasePath)
+	assert.ElementsMatch(t, []SlotDefinition{{Name: "dev"}, {Name: "staging"}}, cfg.Slots)
 }
 
 func TestLoadConfig_OnlyProject(t *testing.T) {
@@ -81,7 +82,7 @@ func TestLoadConfig_OnlyProject(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, "~/project-trees", cfg.GwqBaseDir)
+	assert.Equal(t, "~/project-trees", cfg.SlotsBasePath)
 	assert.Equal(t, []SlotDefinition{{Name: "feature"}}, cfg.Slots)
 }
 
@@ -119,37 +120,18 @@ this is = broken`)
 	assert.Contains(t, err.Error(), "bad-global.toml")
 }
 
-func TestLoadConfig_MergedValidationError(t *testing.T) {
+
+
+func TestLoadConfig_ProjectOverridesSlotsBasePath(t *testing.T) {
 	dir := t.TempDir()
 	gp := writeTempConfig(t, dir, "global.toml", `
-[[slots]]
-name = "dup"
-`)
-	pp := writeTempConfig(t, dir, "project.toml", `
-[[slots]]
-name = "dup"
-
-[[slots]]
-name = "dup"
-`)
-
-	_, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
-	require.Error(t, err)
-
-	var target *ErrDuplicateSlotName
-	assert.ErrorAs(t, err, &target)
-}
-
-func TestLoadConfig_ProjectOverridesGwqBaseDir(t *testing.T) {
-	dir := t.TempDir()
-	gp := writeTempConfig(t, dir, "global.toml", `
-gwq_basedir = "~/global-base"
+slots_base_path = "~/global-base"
 
 [[slots]]
 name = "s1"
 `)
 	pp := writeTempConfig(t, dir, "project.toml", `
-gwq_basedir = "~/project-base"
+slots_base_path = "~/project-base"
 
 [[slots]]
 name = "s1"
@@ -157,10 +139,10 @@ name = "s1"
 
 	cfg, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
 	require.NoError(t, err)
-	assert.Equal(t, "~/project-base", cfg.GwqBaseDir)
+	assert.Equal(t, "~/project-base", cfg.SlotsBasePath)
 }
 
-func TestLoadConfig_ProjectSlotsReplaceGlobal(t *testing.T) {
+func TestLoadConfig_ProjectSlotsAppendGlobal(t *testing.T) {
 	dir := t.TempDir()
 	gp := writeTempConfig(t, dir, "global.toml", `
 [[slots]]
@@ -173,7 +155,7 @@ name = "project-slot"
 
 	cfg, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
 	require.NoError(t, err)
-	assert.Equal(t, []SlotDefinition{{Name: "project-slot"}}, cfg.Slots)
+	assert.ElementsMatch(t, []SlotDefinition{{Name: "global-slot"}, {Name: "project-slot"}}, cfg.Slots)
 }
 
 func TestLoadConfig_HooksFieldMerged(t *testing.T) {
@@ -183,23 +165,23 @@ func TestLoadConfig_HooksFieldMerged(t *testing.T) {
 name = "s1"
 
 [hooks]
-pre_load = "global-pre.sh"
-post_load = "global-post.sh"
+pre_mount = [{type = "run", command = "global-pre.sh"}]
+post_mount = [{type = "run", command = "global-post.sh"}]
 `)
 	pp := writeTempConfig(t, dir, "project.toml", `
 [[slots]]
 name = "s1"
 
 [hooks]
-post_load = "project-post.sh"
-pre_clear = "project-pre-clear.sh"
+post_mount = [{type = "run", command = "project-post.sh"}]
+pre_clear = [{type = "run", command = "project-pre-clear.sh"}]
 `)
 
 	cfg, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
 	require.NoError(t, err)
-	assert.Equal(t, "global-pre.sh", cfg.Hooks.PreLoad)
-	assert.Equal(t, "project-post.sh", cfg.Hooks.PostLoad)
-	assert.Equal(t, "project-pre-clear.sh", cfg.Hooks.PreClear)
+	assert.Equal(t, []HookAction{{Type: "run", Command: "global-pre.sh"}}, cfg.Hooks.PreMount)
+	assert.Equal(t, []HookAction{{Type: "run", Command: "project-post.sh"}}, cfg.Hooks.PostMount)
+	assert.Equal(t, []HookAction{{Type: "run", Command: "project-pre-clear.sh"}}, cfg.Hooks.PreClear)
 	assert.Empty(t, cfg.Hooks.PostClear)
 }
 

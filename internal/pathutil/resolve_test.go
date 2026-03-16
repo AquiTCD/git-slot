@@ -44,23 +44,23 @@ func TestResolveSlotsBasePath_GwqDefault(t *testing.T) {
 	assert.Equal(t, filepath.Join(home, "worktrees", "github.com", "user", "repo", "slots"), got)
 }
 
-func TestResolveSlotsBasePath_CustomGwqBaseDir(t *testing.T) {
-	cfg := &config.Config{GwqBaseDir: "/opt/worktrees"}
+func TestResolveSlotsBasePath_CustomSlotsBasePath(t *testing.T) {
+	cfg := &config.Config{SlotsBasePath: "/opt/worktrees"}
 	remote := &git.RemoteInfo{Host: "gitlab.com", Owner: "team", Repo: "project"}
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join("/opt/worktrees", "gitlab.com", "team", "project", "slots"), got)
+	assert.Equal(t, "/opt/worktrees", got)
 }
 
-func TestResolveSlotsBasePath_GwqBaseDirWithTilde(t *testing.T) {
+func TestResolveSlotsBasePath_SlotsBasePathWithTilde(t *testing.T) {
 	home := homeDir(t)
-	cfg := &config.Config{GwqBaseDir: "~/custom-trees"}
+	cfg := &config.Config{SlotsBasePath: "~/custom-trees"}
 	remote := &git.RemoteInfo{Host: "github.com", Owner: "org", Repo: "app"}
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(home, "custom-trees", "github.com", "org", "app", "slots"), got)
+	assert.Equal(t, filepath.Join(home, "custom-trees"), got)
 }
 
 func TestResolveSlotsBasePath_NoRemoteInfo(t *testing.T) {

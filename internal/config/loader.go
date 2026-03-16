@@ -49,7 +49,7 @@ func LoadConfig(opts LoadOptions) (*Config, error) {
 	var globalCfg, projectCfg *Config
 
 	if globalExists {
-		cfg, err := readAndParse(globalPath)
+		cfg, err := LoadSpecificConfig(globalPath)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func LoadConfig(opts LoadOptions) (*Config, error) {
 	}
 
 	if projectExists {
-		cfg, err := readAndParse(projectPath)
+		cfg, err := LoadSpecificConfig(projectPath)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +86,7 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func readAndParse(path string) (*Config, error) {
+func LoadSpecificConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
