@@ -195,9 +195,9 @@ func TestGetPath_UnknownSlot(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrSlotUnknown))
 }
 
-// --- Load tests ---
+// --- Mount tests ---
 
-func TestLoad_ExistingBranch_EmptySlot(t *testing.T) {
+func TestMount_ExistingBranch_EmptySlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -213,14 +213,14 @@ func TestLoad_ExistingBranch_EmptySlot(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{})
+	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err)
 	assert.Equal(t, "/base/slots/work", addPath)
 	assert.Equal(t, "feature/x", addBranch)
 }
 
-func TestLoad_ExistingBranch_ActiveSlot(t *testing.T) {
+func TestMount_ExistingBranch_ActiveSlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -248,14 +248,14 @@ func TestLoad_ExistingBranch_ActiveSlot(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{})
+	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err)
 	assert.True(t, removeCalled)
 	assert.True(t, addCalled)
 }
 
-func TestLoad_ExistingBranch_DirtySlot_NoForce(t *testing.T) {
+func TestMount_ExistingBranch_DirtySlot_NoForce(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -269,13 +269,13 @@ func TestLoad_ExistingBranch_DirtySlot_NoForce(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{})
+	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrSlotDirty))
 }
 
-func TestLoad_ExistingBranch_DirtySlot_Force(t *testing.T) {
+func TestMount_ExistingBranch_DirtySlot_Force(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -301,14 +301,14 @@ func TestLoad_ExistingBranch_DirtySlot_Force(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{Force: true})
+	err := mgr.Mount("work", "feature/x", MountOptions{Force: true})
 
 	require.NoError(t, err)
 	assert.True(t, removeCalled)
 	assert.True(t, removeForce)
 }
 
-func TestLoad_CreateBranch_EmptySlot(t *testing.T) {
+func TestMount_CreateBranch_EmptySlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -324,14 +324,14 @@ func TestLoad_CreateBranch_EmptySlot(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/new", LoadOptions{CreateBranch: true})
+	err := mgr.Mount("work", "feature/new", MountOptions{CreateBranch: true})
 
 	require.NoError(t, err)
 	assert.Equal(t, "/base/slots/work", newBranchPath)
 	assert.Equal(t, "feature/new", newBranchName)
 }
 
-func TestLoad_CreateBranch_AlreadyExists(t *testing.T) {
+func TestMount_CreateBranch_AlreadyExists(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -341,13 +341,13 @@ func TestLoad_CreateBranch_AlreadyExists(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/new", LoadOptions{CreateBranch: true})
+	err := mgr.Mount("work", "feature/new", MountOptions{CreateBranch: true})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrBranchExists))
 }
 
-func TestLoad_BranchInUse_OtherSlot(t *testing.T) {
+func TestMount_BranchInUse_OtherSlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
 	}
@@ -361,7 +361,7 @@ func TestLoad_BranchInUse_OtherSlot(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{})
+	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrBranchInUse))
@@ -370,7 +370,7 @@ func TestLoad_BranchInUse_OtherSlot(t *testing.T) {
 	assert.Equal(t, "hotfix", brErr.UsedBy)
 }
 
-func TestLoad_BranchInUse_GwqWorktree(t *testing.T) {
+func TestMount_BranchInUse_GwqWorktree(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -384,7 +384,7 @@ func TestLoad_BranchInUse_GwqWorktree(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{})
+	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrBranchInUse))
@@ -393,7 +393,7 @@ func TestLoad_BranchInUse_GwqWorktree(t *testing.T) {
 	assert.Equal(t, "/other/worktree/path", brErr.UsedBy)
 }
 
-func TestLoad_BranchNotFound(t *testing.T) {
+func TestMount_BranchNotFound(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -403,26 +403,26 @@ func TestLoad_BranchNotFound(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "nonexistent", LoadOptions{})
+	err := mgr.Mount("work", "nonexistent", MountOptions{})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrBranchNotFound))
 }
 
-func TestLoad_UnknownSlot(t *testing.T) {
+func TestMount_UnknownSlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
 	mock := &mockWorktree{}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("nope", "main", LoadOptions{})
+	err := mgr.Mount("nope", "main", MountOptions{})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrSlotUnknown))
 }
 
-func TestLoad_WorktreeAddFails(t *testing.T) {
+func TestMount_WorktreeAddFails(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
@@ -435,7 +435,7 @@ func TestLoad_WorktreeAddFails(t *testing.T) {
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Load("work", "feature/x", LoadOptions{})
+	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "worktree add failed")

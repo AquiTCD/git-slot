@@ -9,6 +9,16 @@ import (
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 )
 
+type SlotManager interface {
+	List() ([]Slot, error)
+	GetPath(slotName string) (string, error)
+	Mount(slotName, branchName string, opts MountOptions) error
+	Clear(slotName string, opts ClearOptions) error
+	Swap(slotNameA, slotNameB string) error
+	Status(slotName string) (*SlotStatus, error)
+	StatusAll() ([]SlotStatus, error)
+}
+
 type Manager struct {
 	cfg       *config.Config
 	basePath  string
@@ -21,38 +31,51 @@ func NewManager(cfg *config.Config, basePath string, wt git.Worktree) *Manager {
 	return &Manager{cfg: cfg, basePath: basePath, wt: wt}
 }
 
-func (m *Manager) List() ([]Slot, error) {
+func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) error {
+	wt, ok := wtByPath[s.Path]
+	if !ok {
+		return nil
+	}
+	s.State = SlotActive
+	s.Branch = wt.Branch
+	s.HeadHash = wt.HeadHash
+
+	dirty, err := m.wt.IsDirty(s.Path)
+	if err != nil {
+		return err
+	}
+	s.IsDirty = dirty
+	return nil
+}
+
+func (m *Manager) worktreeMap() (map[string]git.WorktreeInfo, error) {
 	worktrees, err := m.fetchWorktrees()
 	if err != nil {
 		return nil, err
 	}
-
 	wtByPath := make(map[string]git.WorktreeInfo, len(worktrees))
 	for _, wt := range worktrees {
 		wtByPath[wt.Path] = wt
 	}
+	return wtByPath, nil
+}
+
+func (m *Manager) List() ([]Slot, error) {
+	wtByPath, err := m.worktreeMap()
+	if err != nil {
+		return nil, err
+	}
 
 	slots := make([]Slot, 0, len(m.cfg.Slots))
 	for _, def := range m.cfg.Slots {
-		slotPath := pathutil.ResolveSlotPath(m.basePath, def.Name)
 		s := Slot{
 			Name: def.Name,
 			Icon: def.Icon,
-			Path: slotPath,
+			Path: pathutil.ResolveSlotPath(m.basePath, def.Name),
 		}
-
-		if wt, ok := wtByPath[slotPath]; ok {
-			s.State = SlotActive
-			s.Branch = wt.Branch
-			s.HeadHash = wt.HeadHash
-
-			dirty, err := m.wt.IsDirty(slotPath)
-			if err != nil {
-				return nil, err
-			}
-			s.IsDirty = dirty
+		if err := m.populateSlot(&s, wtByPath); err != nil {
+			return nil, err
 		}
-
 		slots = append(slots, s)
 	}
 
@@ -66,18 +89,18 @@ func (m *Manager) GetPath(slotName string) (string, error) {
 	}
 
 	if slot.State == SlotEmpty {
-		return "", &SlotError{SlotName: slotName, Err: ErrSlotEmpty, Detail: "load a branch first"}
+		return "", &SlotError{SlotName: slotName, Err: ErrSlotEmpty, Detail: "mount a branch first"}
 	}
 
 	return slot.Path, nil
 }
 
-type LoadOptions struct {
+type MountOptions struct {
 	CreateBranch bool
 	Force        bool
 }
 
-func (m *Manager) Load(slotName, branchName string, opts LoadOptions) error {
+func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 	slot, err := m.resolveSlot(slotName)
 	if err != nil {
 		return err
@@ -195,29 +218,34 @@ type SlotStatus struct {
 	Changes       []string
 }
 
-func (m *Manager) Status(slotName string) (*SlotStatus, error) {
-	slot, err := m.resolveSlot(slotName)
-	if err != nil {
-		return nil, err
+func (m *Manager) enrichStatus(st *SlotStatus) error {
+	if st.State != SlotActive {
+		return nil
 	}
-
-	st := &SlotStatus{Slot: *slot}
-	if slot.State == SlotEmpty {
-		return st, nil
-	}
-
-	subject, err := m.wt.CommitSubject(slot.Path)
+	subject, err := m.wt.CommitSubject(st.Path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	st.CommitSubject = subject
 
-	changes, err := m.wt.StatusShort(slot.Path)
+	changes, err := m.wt.StatusShort(st.Path)
+	if err != nil {
+		return err
+	}
+	st.Changes = changes
+	return nil
+}
+
+func (m *Manager) Status(slotName string) (*SlotStatus, error) {
+	s, err := m.resolveSlot(slotName)
 	if err != nil {
 		return nil, err
 	}
-	st.Changes = changes
 
+	st := &SlotStatus{Slot: *s}
+	if err := m.enrichStatus(st); err != nil {
+		return nil, err
+	}
 	return st, nil
 }
 
@@ -230,18 +258,8 @@ func (m *Manager) StatusAll() ([]SlotStatus, error) {
 	statuses := make([]SlotStatus, 0, len(slots))
 	for _, s := range slots {
 		st := SlotStatus{Slot: s}
-		if s.State == SlotActive {
-			subject, err := m.wt.CommitSubject(s.Path)
-			if err != nil {
-				return nil, err
-			}
-			st.CommitSubject = subject
-
-			changes, err := m.wt.StatusShort(s.Path)
-			if err != nil {
-				return nil, err
-			}
-			st.Changes = changes
+		if err := m.enrichStatus(&st); err != nil {
+			return nil, err
 		}
 		statuses = append(statuses, st)
 	}
@@ -264,31 +282,18 @@ func (m *Manager) resolveSlot(name string) (*Slot, error) {
 		return nil, &SlotError{SlotName: name, Err: ErrSlotUnknown}
 	}
 
-	slotPath := pathutil.ResolveSlotPath(m.basePath, name)
-	s := &Slot{
-		Name: name,
-		Icon: def.Icon,
-		Path: slotPath,
-	}
-
-	worktrees, err := m.fetchWorktrees()
+	wtByPath, err := m.worktreeMap()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, wt := range worktrees {
-		if wt.Path == slotPath {
-			s.State = SlotActive
-			s.Branch = wt.Branch
-			s.HeadHash = wt.HeadHash
-
-			dirty, err := m.wt.IsDirty(slotPath)
-			if err != nil {
-				return nil, err
-			}
-			s.IsDirty = dirty
-			break
-		}
+	s := &Slot{
+		Name: name,
+		Icon: def.Icon,
+		Path: pathutil.ResolveSlotPath(m.basePath, name),
+	}
+	if err := m.populateSlot(s, wtByPath); err != nil {
+		return nil, err
 	}
 
 	return s, nil
