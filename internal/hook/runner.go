@@ -66,37 +66,35 @@ func (r *Runner) runAction(action config.HookAction, env HookEnv) error {
 	}
 }
 
-func (r *Runner) handleLink(action config.HookAction, env HookEnv) error {
-	src := r.expandEnv(action.Source, env)
-	dest := r.expandEnv(action.Dest, env)
+func (r *Runner) resolveAndPrepare(action config.HookAction, env HookEnv, hookType string) (src, dest string, err error) {
+	src = r.expandEnv(action.Source, env)
+	dest = r.expandEnv(action.Dest, env)
 
 	if src == "" || dest == "" {
-		return fmt.Errorf("link hook: missing source or destination")
+		return "", "", fmt.Errorf("%s hook: missing source or destination", hookType)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
-		return err
+		return "", "", err
 	}
 
-	_ = os.RemoveAll(dest) // Remove existing file or directory
+	_ = os.RemoveAll(dest)
+	return src, dest, nil
+}
+
+func (r *Runner) handleLink(action config.HookAction, env HookEnv) error {
+	src, dest, err := r.resolveAndPrepare(action, env, "link")
+	if err != nil {
+		return err
+	}
 	return os.Symlink(src, dest)
 }
 
 func (r *Runner) handleCopy(action config.HookAction, env HookEnv) error {
-	src := r.expandEnv(action.Source, env)
-	dest := r.expandEnv(action.Dest, env)
-
-	if src == "" || dest == "" {
-		return fmt.Errorf("copy hook: missing source or destination")
-	}
-
-	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+	src, dest, err := r.resolveAndPrepare(action, env, "copy")
+	if err != nil {
 		return err
 	}
-
-	_ = os.RemoveAll(dest) // Ensure clean destination
-
-	// Just use cp -R via shell for simplicity and robustness with directories
 	cmd := exec.Command("cp", "-R", src, dest)
 	return cmd.Run()
 }

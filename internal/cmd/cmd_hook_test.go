@@ -32,7 +32,7 @@ func TestUpdateConfigWithHooks(t *testing.T) {
 	}
 
 	tomlContent := string(content)
-	
+
 	// Check content
 	expectedFragments := []string{
 		"type = 'link'",

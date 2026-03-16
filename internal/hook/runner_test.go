@@ -132,3 +132,164 @@ echo "hello stderr" >&2
 	assert.Contains(t, stdout.String(), "hello stdout")
 	assert.Contains(t, stderr.String(), "hello stderr")
 }
+
+func TestHandleLink_CreatesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	require.NoError(t, os.WriteFile(src, []byte("hello"), 0644))
+
+	dest := filepath.Join(dir, "sub", "link.txt")
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "link",
+		Source: src,
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.NoError(t, err)
+
+	target, err := os.Readlink(dest)
+	require.NoError(t, err)
+	assert.Equal(t, src, target)
+}
+
+func TestHandleLink_ReplacesExisting(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	require.NoError(t, os.WriteFile(src, []byte("new"), 0644))
+
+	dest := filepath.Join(dir, "link.txt")
+	require.NoError(t, os.WriteFile(dest, []byte("old"), 0644))
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "link",
+		Source: src,
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.NoError(t, err)
+
+	target, err := os.Readlink(dest)
+	require.NoError(t, err)
+	assert.Equal(t, src, target)
+}
+
+func TestHandleLink_MissingSrc(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "link.txt")
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "link",
+		Source: "",
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing source or destination")
+}
+
+func TestHandleLink_ExpandsEnvVars(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	require.NoError(t, os.WriteFile(src, []byte("data"), 0644))
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "link",
+		Source: filepath.Join("$GSL_REPO_ROOT", "source.txt"),
+		Dest:   filepath.Join("$GSL_SLOT_PATH", "source.txt"),
+	}}, HookEnv{
+		RepoRoot: dir,
+		SlotPath: filepath.Join(dir, "slot"),
+	})
+
+	require.NoError(t, err)
+
+	dest := filepath.Join(dir, "slot", "source.txt")
+	target, err := os.Readlink(dest)
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(dir, "source.txt"), target)
+}
+
+func TestHandleCopy_CopiesFile(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	require.NoError(t, os.WriteFile(src, []byte("content"), 0644))
+
+	dest := filepath.Join(dir, "sub", "copy.txt")
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "copy",
+		Source: src,
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(dest)
+	require.NoError(t, err)
+	assert.Equal(t, "content", string(data))
+}
+
+func TestHandleCopy_CopiesDirectory(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "srcdir")
+	require.NoError(t, os.MkdirAll(srcDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("aaa"), 0644))
+
+	dest := filepath.Join(dir, "destdir")
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "copy",
+		Source: srcDir,
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(filepath.Join(dest, "a.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "aaa", string(data))
+}
+
+func TestHandleCopy_MissingSrc(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "copy.txt")
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "copy",
+		Source: "",
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing source or destination")
+}
+
+func TestHandleCopy_ReplacesExisting(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	require.NoError(t, os.WriteFile(src, []byte("new"), 0644))
+
+	dest := filepath.Join(dir, "copy.txt")
+	require.NoError(t, os.WriteFile(dest, []byte("old"), 0644))
+
+	r := NewRunner(os.Stdout, os.Stderr)
+	err := r.Run([]config.HookAction{{
+		Type:   "copy",
+		Source: src,
+		Dest:   dest,
+	}}, HookEnv{})
+
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(dest)
+	require.NoError(t, err)
+	assert.Equal(t, "new", string(data))
+}

@@ -8,7 +8,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slot"
 )
 
-func runSwap(mgr *slot.Manager, swapArgs []string, out io.Writer) error {
+func runSwap(mgr slot.SlotManager, swapArgs []string, out io.Writer) error {
 	if len(swapArgs) != 2 {
 		return fmt.Errorf("--swap requires exactly 2 slot names")
 	}

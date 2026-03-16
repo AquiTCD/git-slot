@@ -7,7 +7,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slot"
 )
 
-func runStatus(mgr *slot.Manager, slotName string, out io.Writer, useJSON bool) error {
+func runStatus(mgr slot.SlotManager, slotName string, out io.Writer, useJSON bool) error {
 	if slotName == "" {
 		statuses, err := mgr.StatusAll()
 		if err != nil {
