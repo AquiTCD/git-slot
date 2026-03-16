@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-03-16
+
+### Changed
+
+- **Breaking**: Migrated from flag-based to subcommand-based CLI. All operations are now subcommands:
+  - `git slot set <slot> [branch]` (was: `git slot <slot> [branch]`)
+  - `git slot list` (was: `git slot --list`)
+  - `git slot clear <slot>` (was: `git slot -d <slot>`)
+  - `git slot swap <A> <B>` (was: `git slot --swap <A> <B>`)
+  - `git slot status [slot]` (was: `git slot --status [slot]`)
+  - `git slot init` (was: `git slot --init`)
+  - `git slot hook` (was: `git slot --hook`)
+  - `git slot root` (was: `git slot --eject`)
+- Added `-v` shorthand for `--version` on root command.
+- Added `-f` shorthand for `--force` on `set`, `clear`, and `init` subcommands.
+- gsl wrapper usage updated: `gsl set <slot>`, `gsl root` (was: `gsl <slot>`, `gsl -e`).
+
+### Fixed
+
+- `--eject` / `root` now correctly returns the main repo root even from linked worktrees.
+
 ## [0.4.1] - 2026-03-16
 
 ### Added
@@ -124,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.5.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.0
 [0.4.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.1
 [0.4.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.3.0
