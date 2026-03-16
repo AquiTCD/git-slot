@@ -15,16 +15,17 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
-func runHookHelper(a *app, out io.Writer, global bool) error {
-	var configPath string
+func resolveConfigPath(repoRoot string, global bool) (string, error) {
 	if global {
-		p, err := config.DefaultGlobalConfigPath()
-		if err != nil {
-			return err
-		}
-		configPath = p
-	} else {
-		configPath = filepath.Join(a.repoRoot, "git-slot.toml")
+		return config.DefaultGlobalConfigPath()
+	}
+	return filepath.Join(repoRoot, "git-slot.toml"), nil
+}
+
+func runHookHelper(a *app, out io.Writer, global bool) error {
+	configPath, err := resolveConfigPath(a.repoRoot, global)
+	if err != nil {
+		return err
 	}
 
 	// Load existing config to pre-fill TUI
@@ -85,52 +86,22 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 	return updateConfigWithHooks(a, results, out, global)
 }
 
-func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global bool) error {
-	var configPath string
-	if global {
-		p, err := config.DefaultGlobalConfigPath()
-		if err != nil {
-			return err
-		}
-		configPath = p
-	} else {
-		configPath = filepath.Join(a.repoRoot, "git-slot.toml")
-	}
+const hookManagedMarker = "# --- Managed by git-slot --hook ---"
 
-	// Read existing content to preserve comments
-	var originalContent string
-	if data, err := os.ReadFile(configPath); err == nil {
-		originalContent = string(data)
-	}
-
-	// Parse to find existing 'run' hooks we might want to preserve
-	// (Simple approach: we'll re-generate the entire post_mount section,
-	// but we could be more surgical if needed).
-	var targetCfg *config.Config
-	if originalContent != "" {
-		if cfg, err := config.ParseTOML([]byte(originalContent)); err == nil {
-			targetCfg = cfg
-		}
-	}
-	if targetCfg == nil {
-		targetCfg = &config.Config{}
-	}
-
-	// Filter out automatic link/copy actions and keep manual ones
-	var finalPostMount []config.HookAction
-	for _, existing := range targetCfg.Hooks.PostMount {
+func buildPostMountHooks(existingHooks []config.HookAction, items []tui.HookItem) ([]config.HookAction, bool) {
+	var hooks []config.HookAction
+	for _, existing := range existingHooks {
 		if existing.Type == "run" {
-			finalPostMount = append(finalPostMount, existing)
+			hooks = append(hooks, existing)
 		}
 	}
 
-	// Add new items from TUI
-	found := false
+	hasNew := false
 	for _, item := range items {
 		if item.Action == tui.ActionNone {
 			continue
 		}
-		found = true
+		hasNew = true
 		action := config.HookAction{
 			Source: filepath.Join("$GSL_REPO_ROOT", item.Path),
 			Dest:   filepath.Join("$GSL_SLOT_PATH", item.Path),
@@ -141,62 +112,78 @@ func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global b
 		case tui.ActionCopy:
 			action.Type = "copy"
 		}
-		finalPostMount = append(finalPostMount, action)
+		hooks = append(hooks, action)
 	}
 
-	if !found && len(finalPostMount) == 0 {
-		_, _ = fmt.Fprintln(out, "No actions selected and no existing hooks found.")
-		return nil
-	}
+	return hooks, hasNew
+}
 
-	// SURGERY: First, remove the entire managed block if it exists
-	marker := "# --- Managed by git-slot --hook ---"
-	if idx := strings.Index(originalContent, marker); idx != -1 {
+func generateHooksTOML(originalContent string, hooks []config.HookAction) (string, error) {
+	if idx := strings.Index(originalContent, hookManagedMarker); idx != -1 {
 		originalContent = originalContent[:idx]
 	}
 
-	// Then, remove any remaining [[hooks.post_mount]] blocks (for robustness)
 	re := regexp.MustCompile(`(?ms)^\s*\[\[hooks\.post_mount\]\].*?(\n\n|(?:\n\s*\[)|\z)`)
 	contentWithoutHooks := re.ReplaceAllString(originalContent, "$1")
 	contentWithoutHooks = strings.TrimSpace(contentWithoutHooks)
 
-	// Clean up potential trailing empty [hooks] if it's now empty (optional, keeping it simple for now)
-
-	// Generate the new hooks TOML
-	// We want to generate [[hooks.post_mount]] blocks directly.
-	// Since go-toml/v2 doesn't easily support un-rooted slices with custom names,
-	// we'll use a temporary map or similar to get the right format.
 	type postMountWrapper struct {
 		PostMount []config.HookAction `toml:"post_mount"`
 	}
 	type hooksWrapper struct {
 		Hooks postMountWrapper `toml:"hooks"`
 	}
-	
-	wrapper := hooksWrapper{
-		Hooks: postMountWrapper{
-			PostMount: finalPostMount,
-		},
-	}
-	
-	newHooksData, err := toml.Marshal(wrapper)
+
+	newHooksData, err := toml.Marshal(hooksWrapper{
+		Hooks: postMountWrapper{PostMount: hooks},
+	})
 	if err != nil {
-		return fmt.Errorf("failed to marshal hooks: %w", err)
+		return "", fmt.Errorf("failed to marshal hooks: %w", err)
 	}
 
-	// Reassemble: 1. Processed original (with comments!) + 2. New Hooks
-	var finalOutput strings.Builder
-	finalOutput.WriteString(contentWithoutHooks)
-	finalOutput.WriteString("\n\n")
-	finalOutput.WriteString("# --- Managed by git-slot --hook ---\n")
-	finalOutput.WriteString(string(newHooksData))
+	var out strings.Builder
+	out.WriteString(contentWithoutHooks)
+	out.WriteString("\n\n")
+	out.WriteString(hookManagedMarker + "\n")
+	out.WriteString(string(newHooksData))
 
-	// Ensure parent directory exists
+	return out.String(), nil
+}
+
+func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global bool) error {
+	configPath, err := resolveConfigPath(a.repoRoot, global)
+	if err != nil {
+		return err
+	}
+
+	var originalContent string
+	if data, err := os.ReadFile(configPath); err == nil {
+		originalContent = string(data)
+	}
+
+	var existingHooks []config.HookAction
+	if originalContent != "" {
+		if cfg, err := config.ParseTOML([]byte(originalContent)); err == nil {
+			existingHooks = cfg.Hooks.PostMount
+		}
+	}
+
+	hooks, hasNew := buildPostMountHooks(existingHooks, items)
+	if !hasNew && len(hooks) == 0 {
+		_, _ = fmt.Fprintln(out, "No actions selected and no existing hooks found.")
+		return nil
+	}
+
+	finalContent, err := generateHooksTOML(originalContent, hooks)
+	if err != nil {
+		return err
+	}
+
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(configPath, []byte(finalOutput.String()), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(finalContent), 0644); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 

@@ -13,7 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writer) error {
+func runMount(a *app, slotName, branchName string, createBranch, force bool, out io.Writer) error {
 	hookRunner := hook.NewRunner(out, os.Stderr)
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
 
@@ -29,9 +29,9 @@ func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writ
 		return fmt.Errorf("pre-mount hook: %w", err)
 	}
 
-	if err := a.mgr.Load(slotName, branchName, slot.LoadOptions{
+	if err := a.mgr.Mount(slotName, branchName, slot.MountOptions{
 		CreateBranch: createBranch,
-		Force:        flagForce,
+		Force:        force,
 	}); err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writ
 	return nil
 }
 
-func runGetPath(mgr *slot.Manager, slotName string, out io.Writer) error {
+func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 	path, err := mgr.GetPath(slotName)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func runGetPath(mgr *slot.Manager, slotName string, out io.Writer) error {
 	return nil
 }
 
-func runInteractive(a *app, out io.Writer) error {
+func runInteractive(a *app, force bool, out io.Writer) error {
 	slots, err := a.mgr.List()
 	if err != nil {
 		return err
@@ -91,5 +91,5 @@ func runInteractive(a *app, out io.Writer) error {
 		return runGetPath(a.mgr, result.SlotName, out)
 	}
 
-	return runLoad(a, result.SlotName, result.BranchName, result.CreateBranch, out)
+	return runMount(a, result.SlotName, result.BranchName, result.CreateBranch, force, out)
 }

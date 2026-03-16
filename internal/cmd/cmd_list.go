@@ -8,7 +8,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/tui"
 )
 
-func runList(mgr *slot.Manager, out io.Writer, useJSON bool) error {
+func runList(mgr slot.SlotManager, out io.Writer, useJSON bool) error {
 	slots, err := mgr.List()
 	if err != nil {
 		return err

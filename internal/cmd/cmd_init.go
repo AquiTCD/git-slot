@@ -9,13 +9,13 @@ import (
 	"github.com/AquiTCD/git-slot/internal/git"
 )
 
-func runInit(out io.Writer) error {
+func runInit(out io.Writer, global, force bool) error {
 	detector := git.NewExecDetector("")
 	repoRoot, _ := detector.RepoRoot()
 
 	path, err := config.Init(config.InitOptions{
-		Global: flagGlobal,
-		Force:  flagForce,
+		Global: global,
+		Force:  force,
 	}, repoRoot)
 	if err != nil {
 		return err

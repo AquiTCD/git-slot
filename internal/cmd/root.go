@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/AquiTCD/git-slot/internal/config"
-	"github.com/AquiTCD/git-slot/internal/git"
 	"github.com/AquiTCD/git-slot/internal/errutil"
+	"github.com/AquiTCD/git-slot/internal/git"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/tui"
@@ -34,11 +34,11 @@ var rootCmd = &cobra.Command{
 	Use:   "git-slot [slot] [branch]",
 	Short: "Manage git worktrees as fixed slots",
 	Long: `git-slot manages git worktrees as fixed, named slots defined in TOML configuration.
-Load branches into slots, clear them, swap between them, and more.
+Mount branches into slots, clear them, swap between them, and more.
 
 Usage as a git subcommand:
-  git slot <slot> <branch>       Load an existing branch into a slot
-  git slot <slot> -c <branch>    Create a new branch and load it into a slot
+  git slot <slot> <branch>       Mount an existing branch into a slot
+  git slot <slot> -c <branch>    Create a new branch and mount it into a slot
   git slot <slot>                Print the slot's worktree path
 Management flags:
   git slot -l, --list            List all slots and their status
@@ -64,7 +64,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&flagInit, "init", false, "Generate a template config file")
 	rootCmd.Flags().BoolVar(&flagHook, "hook", false, "Open interactive TUI to setup post-mount hooks")
 	rootCmd.Flags().BoolVarP(&flagGlobal, "global", "g", false, "Used with --init or --hook to target global config")
-	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and load into slot")
+	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and mount into slot")
 	rootCmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Alias for --create")
 	rootCmd.Flags().BoolVar(&flagForce, "force", false, "Skip confirmation for destructive actions")
 	rootCmd.Flags().BoolVarP(&flagEject, "eject", "e", false, "Print the repository root path (use with gsl to cd back)")
@@ -82,7 +82,7 @@ func run(cmd *cobra.Command, args []string) error {
 	out := cmd.OutOrStdout()
 
 	if flagInit {
-		return runInit(out)
+		return runInit(out, flagGlobal, flagForce)
 	}
 
 	if flagHook {
@@ -108,7 +108,7 @@ func run(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			return runInteractive(a, cmd.OutOrStdout())
+			return runInteractive(a, flagForce, cmd.OutOrStdout())
 		}
 		return cmd.Help()
 	}
@@ -133,7 +133,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return runList(a.mgr, out, flagJSON)
 	}
 	if flagClear != "" {
-		return runClear(a, flagClear, out)
+		return runClear(a, flagClear, flagForce, out)
 	}
 	if cmd.Flags().Changed("swap") {
 		return runSwap(a.mgr, flagSwap, out)
@@ -144,16 +144,16 @@ func run(cmd *cobra.Command, args []string) error {
 
 	slotName := args[0]
 	if len(args) == 2 {
-		return runLoad(a, slotName, args[1], false, out)
+		return runMount(a, slotName, args[1], false, flagForce, out)
 	}
 	if newBranch != "" {
-		return runLoad(a, slotName, newBranch, true, out)
+		return runMount(a, slotName, newBranch, true, flagForce, out)
 	}
 	return runGetPath(a.mgr, slotName, out)
 }
 
 type app struct {
-	mgr      *slot.Manager
+	mgr      slot.SlotManager
 	cfg      *config.Config
 	basePath string
 	repoRoot string
@@ -190,7 +190,6 @@ func bootstrap() (*app, error) {
 		repoRoot: repoRoot,
 	}, nil
 }
-
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {

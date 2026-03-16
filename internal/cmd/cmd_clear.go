@@ -10,7 +10,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slot"
 )
 
-func runClear(a *app, slotName string, out io.Writer) error {
+func runClear(a *app, slotName string, force bool, out io.Writer) error {
 	hookRunner := hook.NewRunner(out, os.Stderr)
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
 
@@ -25,7 +25,7 @@ func runClear(a *app, slotName string, out io.Writer) error {
 		return fmt.Errorf("pre-clear hook: %w", err)
 	}
 
-	if err := a.mgr.Clear(slotName, slot.ClearOptions{Force: flagForce}); err != nil {
+	if err := a.mgr.Clear(slotName, slot.ClearOptions{Force: force}); err != nil {
 		return err
 	}
 
