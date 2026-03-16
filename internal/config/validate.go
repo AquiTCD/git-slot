@@ -7,9 +7,7 @@ import (
 
 var validSlotName = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
-var reservedNames = map[string]bool{
-	".swap-temp": true,
-}
+var reservedNames = map[string]bool{}
 
 func Validate(cfg *Config) error {
 	if len(cfg.Slots) == 0 {

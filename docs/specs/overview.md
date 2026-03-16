@@ -106,7 +106,6 @@ gwq はデフォルトで `~/worktrees/{host}/{owner}/{repo}/{branch}/` にworkt
 - `git slot <slot> <branch>` — スロットへのブランチ装填
 - `git slot -d <slot>` — スロットの解除
 - `git slot --list` — スロット一覧表示
-- `git slot --swap <A> <B>` — スロット間のブランチ入れ替え
 - 安全ガード（ブランチ重複検出、dirty 状態警告）
 
 ### Phase 3: Usability

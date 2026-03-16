@@ -134,9 +134,6 @@ git slot clear main-work
 
 # dirty 状態のスロットを強制解除
 git slot clear main-work -f
-
-# スロット間でブランチを入れ替え
-git slot swap main-work hotfix
 ```
 
 ## 設定
@@ -200,7 +197,6 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `git slot set <slot>` | スロットのパスを出力します |
 | `git slot list` | スロット一覧を表示します |
 | `git slot clear <slot>` | スロットを解除します |
-| `git slot swap <A> <B>` | スロット間のブランチを入れ替えます |
 | `git slot status [slot]` | スロットの詳細状態を表示します |
 | `git slot init [-g]` | 設定ファイルのテンプレートを生成します（`-g` でグローバル） |
 | `git slot hook [-g]` | フック設定の TUI を起動します（`-g` でグローバル） |

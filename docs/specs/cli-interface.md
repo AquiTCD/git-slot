@@ -21,7 +21,6 @@ git branch --list          # フラグ: 一覧
 git slot <slot> <branch>   # メイン: スロットにブランチ装填
 git slot <slot> -c <new>   # メイン: 新規ブランチ作成して装填
 git slot -d <slot>         # フラグ: スロット解除
-git slot --swap <A> <B>    # フラグ: 入れ替え
 git slot --list            # フラグ: 一覧
 ```
 
@@ -72,7 +71,6 @@ git slot <slot>                   # スロットのパスを出力
 
 git slot -l, --list               # スロット一覧を表示
 git slot -d, --clear <slot>       # スロットを解除
-git slot -s, --swap <slot> <slot> # スロット間のブランチを入れ替え
 git slot --status [slot]          # スロットの詳細状態を表示
 git slot --init [--global]        # 設定ファイルのテンプレートを生成
 git slot --version                # バージョン情報を表示
@@ -88,7 +86,6 @@ git slot --help                   # ヘルプを表示
 | `-l` | `--list` | なし | スロット一覧を表示 |
 | `-d` | `--clear` | `<slot>` | スロットを解除（`git branch -d` に倣い `-d`） |
 | | `--force` | なし | Dirty 状態の確認をスキップ |
-| `-s` | `--swap` | `<slot> <slot>` | スロット間のブランチを入れ替え |
 | | `--status` | `[slot]` | スロットの詳細状態を表示 |
 | | `--init` | なし | 設定ファイルを生成 |
 | | `--global` | なし | `--init` と併用。グローバル設定を生成 |
@@ -222,16 +219,6 @@ Force clearing slot 'hotfix'...
 ✓ Slot 'hotfix' is now empty.
 ```
 
-##### `git slot --swap <slotA> <slotB>`
-
-```
-$ git slot --swap main-work hotfix
-Swapping slots...
-  main-work: feature/nice-ui → hotfix/urgent-bug
-  hotfix:    hotfix/urgent-bug → feature/nice-ui
-✓ Swap complete.
-```
-
 ##### `git slot --status [slot]`
 
 ```
@@ -274,11 +261,11 @@ git-slot version 0.1.0 (commit: abc1234, built: 2026-03-13)
 
 1. `--version`, `--help` → 即座に出力して終了
 2. `--init`, `--list` → 管理操作（位置引数は無視）
-3. `--clear <slot>`, `--swap <A> <B>`, `--status [slot]` → フラグ付き管理操作
+3. `--clear <slot>`, `--status [slot]` → フラグ付き管理操作
 4. `<slot> <branch>` / `<slot> -c <branch>` → メイン操作: ブランチ装填
 5. `<slot>` のみ → パス出力
 
-排他フラグ: `--list`, `--clear`, `--swap`, `--status`, `--init` は互いに排他。同時指定はエラー。
+排他フラグ: `--list`, `--clear`, `--status`, `--init` は互いに排他。同時指定はエラー。
 `-c` と `-b` は同義（両方とも新規ブランチ作成）。同時指定はエラー。
 
 #### 3.3.3 出力カラースキーム
@@ -321,7 +308,6 @@ git-slot version 0.1.0 (commit: abc1234, built: 2026-03-13)
 | `git slot --list` | Phase 2 | P0 |
 | `git slot --clear <slot>` | Phase 2 | P0 |
 | `git slot --version` | Phase 2 | P0 |
-| `git slot --swap <A> <B>` | Phase 2 | P1 |
 | `git slot --status [slot]` | Phase 2 | P1 |
 | `git slot --init` | Phase 2 | P1 |
 | `--json` フラグ | Phase 2 | P2 |
