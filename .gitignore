@@ -1,6 +1,6 @@
 # Build artifacts
-/bin/
-/dist/
+/bin
+/dist
 *.exe
 *.exe~
 *.dll
@@ -15,7 +15,10 @@ coverage.out
 Thumbs.db
 
 # IDE
-.idea/
+.idea
 *.swp
 *.swo
 *~
+
+# .git-slot/
+.git-slot/
