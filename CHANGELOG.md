@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-03-16
+
+### Added
+
+- Powerful hook management via `git slot --hook`:
+  - Automatically discovers ignored/untracked files in your repository.
+  - Interactive TUI to choose between `Link`, `Copy`, or `None` for each file.
+  - Performs surgical TOML updates to preserve user-added comments and other configurations.
+- Intelligent configuration merging:
+  - Slots are now merged by name (project-level slots overwrite or extend global slots).
+  - Hook configurations are merged field-by-field, allowing project hooks to coexist with global ones.
+- Enhanced hook execution capabilities:
+  - Directory support: Correctly handles symbolic links and copies for entire directories.
+  - Improved error reporting: Hook failures now include the command's exit code for easier debugging.
+
+### Changed
+
+- Updated terminology: Changed `load` to `mount` throughout the codebase, including configuration fields (`pre_mount`, `post_mount`).
+- Hook structure upgrade: Hook actions are now slices (`[]HookAction`), allowing multiple actions (link, copy, run) for the same hook trigger.
+- Configuration field rename: `gwq_basedir` is now `slots_base_path` for better clarity.
+
+### Fixed
+
+- Configuration duplication: Repeatedly running `git slot --hook` no longer results in duplicate configuration blocks.
+- .gitignore patterns: Correctly handles directory symbolic links in Git.
+
 ## [0.3.0] - 2026-03-15
 
 ### Added
@@ -85,6 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.4.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.3.0
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
