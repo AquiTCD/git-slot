@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-03-16
+
+### Added
+
+- Unit tests for errutil, git/ignored, hook runner (link/copy), and tui/hook_helper.
+- Mock-based integration tests for cmd (runList, runMount, runClear, hook helpers, resolveConfigPath).
+
+### Changed
+
+- slot: Extracted SlotManager interface; renamed Load→Mount, LoadOptions→MountOptions; added populateSlot/worktreeMap and enrichStatus helpers to reduce duplication.
+- cmd: Pass global/force flags explicitly; accept SlotManager interface; extracted resolveConfigPath, buildPostMountHooks, generateHooksTOML from updateConfigWithHooks; renamed cmd_load→cmd_mount, runLoad→runMount.
+- hook: Extracted resolveAndPrepare to deduplicate link/copy setup.
+
 ## [0.4.0] - 2026-03-16
 
 ### Added
@@ -111,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.4.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.1
 [0.4.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.3.0
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
