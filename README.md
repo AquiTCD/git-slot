@@ -93,50 +93,50 @@ git-slot wrapper fish | source
 
 ```bash
 # gsl でスロットにブランチを装填 → 自動で cd
-gsl wood feature/nice-ui
+gsl set wood feature/nice-ui
 
 # 別のスロットに切り替え（cd も自動）
-gsl fire hotfix/urgent-bug
+gsl set fire hotfix/urgent-bug
 
 # 引数なしでインタラクティブモード（TUI でスロット選択）
 gsl
 
 # 元のリポジトリに戻る
-gsl -e
+gsl root
 ```
 
 ## クイックスタート
 
 ```bash
 # 設定ファイルを生成
-git slot --init
+git slot init
 
 # git-slot.toml を編集してスロットを定義
 # （スロット名は自由に設定できます）
 
 # スロットにブランチを装填
-git slot main-work feature/nice-ui
+git slot set main-work feature/nice-ui
 
 # 新規ブランチを作成して装填
-git slot hotfix -c hotfix/urgent-bug
+git slot set hotfix -c hotfix/urgent-bug
 
 # スロット一覧を確認
-git slot --list
+git slot list
 
 # JSON 形式で出力
-git slot --list --json
+git slot list --json
 
 # スロットのパスを取得して移動（gsl なら自動 cd）
-gsl main-work
+gsl set main-work
 
 # スロットを解除
-git slot -d main-work
+git slot clear main-work
 
 # dirty 状態のスロットを強制解除
-git slot -d main-work --force
+git slot clear main-work -f
 
 # スロット間でブランチを入れ替え
-git slot --swap main-work hotfix
+git slot swap main-work hotfix
 ```
 
 ## 設定
@@ -194,24 +194,28 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 
 | コマンド | 説明 |
 |----------|------|
-| `git slot <slot> <branch>` | スロットにブランチを装填します |
-| `git slot <slot> -c <branch>` | 新規ブランチを作成して装填します（`-b` も可） |
-| `git slot <slot>` | スロットのパスを出力します |
-| `git slot -e, --eject` | リポジトリルートのパスを出力します（`gsl -e` で cd） |
-| `git slot -l, --list` | スロット一覧を表示します |
-| `git slot -d, --clear <slot>` | スロットを解除します |
-| `git slot -s, --swap <A> <B>` | スロット間のブランチを入れ替えます |
-| `git slot --status [slot]` | スロットの詳細状態を表示します |
-| `git slot --init [-g]` | 設定ファイルのテンプレートを生成します（`-g` でグローバル） |
-| `git slot --version` | バージョン情報を表示します |
+| `git slot` | インタラクティブ TUI を起動します |
+| `git slot set <slot> <branch>` | スロットにブランチを装填します |
+| `git slot set <slot> -c <branch>` | 新規ブランチを作成して装填します（`-b` も可） |
+| `git slot set <slot>` | スロットのパスを出力します |
+| `git slot list` | スロット一覧を表示します |
+| `git slot clear <slot>` | スロットを解除します |
+| `git slot swap <A> <B>` | スロット間のブランチを入れ替えます |
+| `git slot status [slot]` | スロットの詳細状態を表示します |
+| `git slot init [-g]` | 設定ファイルのテンプレートを生成します（`-g` でグローバル） |
+| `git slot hook [-g]` | フック設定の TUI を起動します（`-g` でグローバル） |
+| `git slot root` | リポジトリルートのパスを出力します（`gsl root` で cd） |
+| `git slot -v, --version` | バージョン情報を表示します |
 
-### 共通フラグ
+### サブコマンド別フラグ
 
-| フラグ | 説明 |
-|--------|------|
-| `--json` | 出力を JSON 形式にします（`--list`, `--status`） |
-| `--force` | dirty 状態の安全チェックをスキップします |
-| `-g, --global` | `--init` と併用してグローバル設定を生成します |
+| フラグ | 対象サブコマンド | 説明 |
+|--------|------------------|------|
+| `--json` | `list`, `status` | 出力を JSON 形式にします |
+| `-f, --force` | `set`, `clear`, `init` | dirty 状態の安全チェックをスキップします |
+| `-g, --global` | `init`, `hook` | グローバル設定を対象にします |
+| `-c, --create` | `set` | 新規ブランチを作成して装填します |
+| `-b, --branch` | `set` | `--create` のエイリアスです |
 
 ## 技術スタック
 
