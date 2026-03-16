@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,18 +21,18 @@ func writeScript(t *testing.T, dir, name, content string) string {
 	return path
 }
 
-func TestRun_EmptyPath(t *testing.T) {
+func TestRun_EmptyActions(t *testing.T) {
 	r := NewRunner(os.Stdout, os.Stderr)
-	err := r.Run("", HookEnv{})
+	err := r.Run(nil, HookEnv{})
 	assert.NoError(t, err)
 }
 
-func TestRun_ScriptNotFound(t *testing.T) {
+func TestRun_CommandNotFound(t *testing.T) {
 	r := NewRunner(os.Stdout, os.Stderr)
-	err := r.Run("/nonexistent/hook.sh", HookEnv{})
+	err := r.Run([]config.HookAction{{Type: "run", Command: "/nonexistent/hook.sh"}}, HookEnv{})
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrHookNotFound)
+	assert.ErrorIs(t, err, ErrHookFailed)
 }
 
 func TestRun_NotExecutable(t *testing.T) {
@@ -45,10 +46,11 @@ func TestRun_NotExecutable(t *testing.T) {
 	require.NoError(t, err)
 
 	r := NewRunner(os.Stdout, os.Stderr)
-	err = r.Run(path, HookEnv{})
+	err = r.Run([]config.HookAction{{Type: "run", Command: path}}, HookEnv{})
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrHookPermission)
+	// Now it defaults to running as sh -c path, so it might fail with different error if not executable
+	assert.ErrorIs(t, err, ErrHookFailed)
 }
 
 func TestRun_Success(t *testing.T) {
@@ -56,7 +58,7 @@ func TestRun_Success(t *testing.T) {
 	path := writeScript(t, dir, "ok.sh", "exit 0\n")
 
 	r := NewRunner(os.Stdout, os.Stderr)
-	err := r.Run(path, HookEnv{SlotName: "work", Action: "load"})
+	err := r.Run([]config.HookAction{{Type: "run", Command: path}}, HookEnv{SlotName: "work", Action: "mount"})
 
 	assert.NoError(t, err)
 }
@@ -66,7 +68,7 @@ func TestRun_FailedExitCode(t *testing.T) {
 	path := writeScript(t, dir, "fail.sh", "exit 1\n")
 
 	r := NewRunner(os.Stdout, os.Stderr)
-	err := r.Run(path, HookEnv{})
+	err := r.Run([]config.HookAction{{Type: "run", Command: path}}, HookEnv{})
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrHookFailed)
@@ -90,9 +92,9 @@ echo "ACTION=$GSL_ACTION"
 		SlotPath: "/slots/work",
 		Branch:   "feature/x",
 		RepoRoot: "/repo",
-		Action:   "load",
+		Action:   "mount",
 	}
-	err := r.Run(path, env)
+	err := r.Run([]config.HookAction{{Type: "run", Command: path}}, env)
 
 	require.NoError(t, err)
 	out := stdout.String()
@@ -100,7 +102,7 @@ echo "ACTION=$GSL_ACTION"
 	assert.Contains(t, out, "SLOT_PATH=/slots/work")
 	assert.Contains(t, out, "BRANCH=feature/x")
 	assert.Contains(t, out, "REPO_ROOT=/repo")
-	assert.Contains(t, out, "ACTION=load")
+	assert.Contains(t, out, "ACTION=mount")
 }
 
 func TestRun_Timeout(t *testing.T) {
@@ -109,7 +111,7 @@ func TestRun_Timeout(t *testing.T) {
 
 	r := NewRunner(os.Stdout, os.Stderr)
 	r.timeout = 100 * time.Millisecond
-	err := r.Run(path, HookEnv{})
+	err := r.Run([]config.HookAction{{Type: "run", Command: path}}, HookEnv{})
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrHookTimeout)
@@ -124,7 +126,7 @@ echo "hello stderr" >&2
 
 	var stdout, stderr bytes.Buffer
 	r := NewRunner(&stdout, &stderr)
-	err := r.Run(path, HookEnv{})
+	err := r.Run([]config.HookAction{{Type: "run", Command: path}}, HookEnv{})
 
 	require.NoError(t, err)
 	assert.Contains(t, stdout.String(), "hello stdout")
