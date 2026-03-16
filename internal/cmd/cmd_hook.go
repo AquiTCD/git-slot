@@ -13,7 +13,29 @@ import (
 	"github.com/AquiTCD/git-slot/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	toml "github.com/pelletier/go-toml/v2"
+	"github.com/spf13/cobra"
 )
+
+var hookCmd = &cobra.Command{
+	Use:   "hook",
+	Short: "Open interactive TUI to setup post-mount hooks",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		global, _ := cmd.Flags().GetBool("global")
+
+		a, err := bootstrap()
+		if err != nil {
+			return err
+		}
+		return runHookHelper(a, cmd.OutOrStdout(), global)
+	},
+}
+
+func init() {
+	hookCmd.Flags().BoolP("global", "g", false, "Target global config instead of project config")
+
+	rootCmd.AddCommand(hookCmd)
+}
 
 func resolveConfigPath(repoRoot string, global bool) (string, error) {
 	if global {
