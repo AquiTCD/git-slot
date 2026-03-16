@@ -22,11 +22,11 @@ func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writ
 		SlotPath: slotPath,
 		Branch:   branchName,
 		RepoRoot: a.repoRoot,
-		Action:   "load",
+		Action:   "mount",
 	}
 
-	if err := hookRunner.Run(a.cfg.Hooks.PreLoad, env); err != nil {
-		return fmt.Errorf("pre_load hook: %w", err)
+	if err := hookRunner.Run(a.cfg.Hooks.PreMount, env); err != nil {
+		return fmt.Errorf("pre-mount hook: %w", err)
 	}
 
 	if err := a.mgr.Load(slotName, branchName, slot.LoadOptions{
@@ -36,8 +36,8 @@ func runLoad(a *app, slotName, branchName string, createBranch bool, out io.Writ
 		return err
 	}
 
-	if err := hookRunner.Run(a.cfg.Hooks.PostLoad, env); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Warning: post_load hook: %v\n", err)
+	if err := hookRunner.Run(a.cfg.Hooks.PostMount, env); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: post-mount hook: %v\n", err)
 	}
 
 	path, _ := a.mgr.GetPath(slotName)

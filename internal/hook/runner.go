@@ -7,7 +7,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/AquiTCD/git-slot/internal/config"
 )
 
 const DefaultTimeout = 30 * time.Second
@@ -24,7 +28,7 @@ type HookEnv struct {
 	SlotPath string
 	Branch   string
 	RepoRoot string
-	Action   string // "load" or "clear"
+	Action   string // "mount" or "clear"
 }
 
 type Runner struct {
@@ -37,26 +41,77 @@ func NewRunner(stdout, stderr io.Writer) *Runner {
 	return &Runner{stdout: stdout, stderr: stderr, timeout: DefaultTimeout}
 }
 
-func (r *Runner) Run(scriptPath string, env HookEnv) error {
-	if scriptPath == "" {
+func (r *Runner) Run(actions []config.HookAction, env HookEnv) error {
+	for _, action := range actions {
+		if err := r.runAction(action, env); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Runner) runAction(action config.HookAction, env HookEnv) error {
+	switch action.Type {
+	case "link":
+		return r.handleLink(action, env)
+	case "copy":
+		return r.handleCopy(action, env)
+	case "run":
+		return r.handleRun(action, env)
+	default:
+		if action.Command != "" {
+			return r.handleRun(action, env) // Default to run for backward compatibility or simple entries
+		}
 		return nil
 	}
+}
 
-	info, err := os.Stat(scriptPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("%s: %w", scriptPath, ErrHookNotFound)
-		}
+func (r *Runner) handleLink(action config.HookAction, env HookEnv) error {
+	src := r.expandEnv(action.Source, env)
+	dest := r.expandEnv(action.Dest, env)
+
+	if src == "" || dest == "" {
+		return fmt.Errorf("link hook: missing source or destination")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}
-	if info.Mode()&0o111 == 0 {
-		return fmt.Errorf("%s: %w", scriptPath, ErrHookPermission)
+
+	_ = os.RemoveAll(dest) // Remove existing file or directory
+	return os.Symlink(src, dest)
+}
+
+func (r *Runner) handleCopy(action config.HookAction, env HookEnv) error {
+	src := r.expandEnv(action.Source, env)
+	dest := r.expandEnv(action.Dest, env)
+
+	if src == "" || dest == "" {
+		return fmt.Errorf("copy hook: missing source or destination")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+
+	_ = os.RemoveAll(dest) // Ensure clean destination
+
+	// Just use cp -R via shell for simplicity and robustness with directories
+	cmd := exec.Command("cp", "-R", src, dest)
+	return cmd.Run()
+}
+
+func (r *Runner) handleRun(action config.HookAction, env HookEnv) error {
+	command := r.expandEnv(action.Command, env)
+	if command == "" {
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, scriptPath)
+	// Use shell to execute the command to support pipes, redirection etc.
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Stdout = r.stdout
 	cmd.Stderr = r.stderr
 	cmd.Env = append(os.Environ(),
@@ -69,14 +124,21 @@ func (r *Runner) Run(scriptPath string, env HookEnv) error {
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("%s: %w", scriptPath, ErrHookTimeout)
+			return fmt.Errorf("command '%s': %w", command, ErrHookTimeout)
 		}
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			return fmt.Errorf("%s: exit code %d: %w", scriptPath, exitErr.ExitCode(), ErrHookFailed)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("command '%s' failed with exit code %d: %w", command, exitErr.ExitCode(), ErrHookFailed)
 		}
-		return err
+		return fmt.Errorf("command '%s': %w", command, ErrHookFailed)
 	}
 
 	return nil
+}
+
+func (r *Runner) expandEnv(s string, env HookEnv) string {
+	s = strings.ReplaceAll(s, "$GSL_SLOT_NAME", env.SlotName)
+	s = strings.ReplaceAll(s, "$GSL_SLOT_PATH", env.SlotPath)
+	s = strings.ReplaceAll(s, "$GSL_BRANCH", env.Branch)
+	s = strings.ReplaceAll(s, "$GSL_REPO_ROOT", env.RepoRoot)
+	return s
 }

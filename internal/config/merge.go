@@ -12,34 +12,40 @@ func Merge(base, override *Config) *Config {
 	}
 
 	merged := &Config{
-		GwqBaseDir:    base.GwqBaseDir,
 		SlotsBasePath: base.SlotsBasePath,
 		Slots:         copySlots(base.Slots),
-		Hooks:         base.Hooks,
+		Hooks:         copyHooks(base.Hooks),
 	}
 
-	if override.GwqBaseDir != "" {
-		merged.GwqBaseDir = override.GwqBaseDir
-	}
 	if override.SlotsBasePath != "" {
 		merged.SlotsBasePath = override.SlotsBasePath
 	}
 
-	if override.Slots != nil {
-		merged.Slots = copySlots(override.Slots)
+	for _, overrideSlot := range override.Slots {
+		found := false
+		for i, baseSlot := range merged.Slots {
+			if baseSlot.Name == overrideSlot.Name {
+				merged.Slots[i] = overrideSlot
+				found = true
+				break
+			}
+		}
+		if !found {
+			merged.Slots = append(merged.Slots, overrideSlot)
+		}
 	}
 
-	if override.Hooks.PreLoad != "" {
-		merged.Hooks.PreLoad = override.Hooks.PreLoad
+	if len(override.Hooks.PreMount) > 0 {
+		merged.Hooks.PreMount = copyHookActions(override.Hooks.PreMount)
 	}
-	if override.Hooks.PostLoad != "" {
-		merged.Hooks.PostLoad = override.Hooks.PostLoad
+	if len(override.Hooks.PostMount) > 0 {
+		merged.Hooks.PostMount = copyHookActions(override.Hooks.PostMount)
 	}
-	if override.Hooks.PreClear != "" {
-		merged.Hooks.PreClear = override.Hooks.PreClear
+	if len(override.Hooks.PreClear) > 0 {
+		merged.Hooks.PreClear = copyHookActions(override.Hooks.PreClear)
 	}
-	if override.Hooks.PostClear != "" {
-		merged.Hooks.PostClear = override.Hooks.PostClear
+	if len(override.Hooks.PostClear) > 0 {
+		merged.Hooks.PostClear = copyHookActions(override.Hooks.PostClear)
 	}
 
 	return merged
@@ -47,11 +53,28 @@ func Merge(base, override *Config) *Config {
 
 func copyConfig(src *Config) *Config {
 	dst := &Config{
-		GwqBaseDir:    src.GwqBaseDir,
 		SlotsBasePath: src.SlotsBasePath,
 		Slots:         copySlots(src.Slots),
-		Hooks:         src.Hooks,
+		Hooks:         copyHooks(src.Hooks),
 	}
+	return dst
+}
+
+func copyHooks(src HooksConfig) HooksConfig {
+	return HooksConfig{
+		PreMount:  copyHookActions(src.PreMount),
+		PostMount: copyHookActions(src.PostMount),
+		PreClear:  copyHookActions(src.PreClear),
+		PostClear: copyHookActions(src.PostClear),
+	}
+}
+
+func copyHookActions(src []HookAction) []HookAction {
+	if src == nil {
+		return nil
+	}
+	dst := make([]HookAction, len(src))
+	copy(dst, src)
 	return dst
 }
 

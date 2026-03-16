@@ -9,22 +9,28 @@ import (
 )
 
 type Config struct {
-	GwqBaseDir    string           `toml:"gwq_basedir"`
-	SlotsBasePath string           `toml:"slots_base_path"`
-	Slots         []SlotDefinition `toml:"slots"`
-	Hooks         HooksConfig      `toml:"hooks"`
+	SlotsBasePath string           `toml:"slots_base_path,omitempty"`
+	Slots         []SlotDefinition `toml:"slots,omitempty"`
+	Hooks         HooksConfig      `toml:"hooks,omitempty"`
 }
 
 type SlotDefinition struct {
-	Name string `toml:"name"`
-	Icon string `toml:"icon"`
+	Name string `toml:"name,omitempty"`
+	Icon string `toml:"icon,omitempty"`
+}
+
+type HookAction struct {
+	Type    string `toml:"type,omitempty"`    // "link", "copy", "run"
+	Source  string `toml:"source,omitempty"`  // For link/copy
+	Dest    string `toml:"dest,omitempty"`    // For link/copy
+	Command string `toml:"command,omitempty"` // For run
 }
 
 type HooksConfig struct {
-	PreLoad   string `toml:"pre_load"`
-	PostLoad  string `toml:"post_load"`
-	PreClear  string `toml:"pre_clear"`
-	PostClear string `toml:"post_clear"`
+	PreMount  []HookAction `toml:"pre_mount,omitempty"`
+	PostMount []HookAction `toml:"post_mount,omitempty"`
+	PreClear  []HookAction `toml:"pre_clear,omitempty"`
+	PostClear []HookAction `toml:"post_clear,omitempty"`
 }
 
 var (

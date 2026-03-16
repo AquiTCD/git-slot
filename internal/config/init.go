@@ -11,9 +11,9 @@ var ErrConfigExists = errors.New("configuration file already exists")
 const configTemplate = `# git-slot.toml — Git Slot configuration
 # See: https://github.com/AquiTCD/git-slot
 
-# gwq base directory (same as gwq's worktree.basedir)
+# Base directory for slots.
 # Default: ~/worktrees
-# gwq_basedir = "~/worktrees"
+# slots_base_path = "~/worktrees"
 
 # Define your slots below.
 # Add as many [[slots]] entries as you need.
@@ -26,14 +26,17 @@ name = "slot-1"
 name = "slot-2"
 # icon = "🔥"
 
-[[slots]]
-name = "slot-3"
-# icon = "💧"
-
 # Optional: hooks
 # [hooks]
-# post_load = ".git-slot/hooks/post-load.sh"
-# post_clear = ".git-slot/hooks/post-clear.sh"
+# Generic post-mount hooks (links, copies, commands)
+# [[hooks.post_mount]]
+# type = "link"
+# source = "$GSL_REPO_ROOT/.env"
+# dest = "$GSL_SLOT_PATH/.env"
+
+# [[hooks.post_mount]]
+# type = "run"
+# command = "npm install"
 `
 
 type InitOptions struct {
