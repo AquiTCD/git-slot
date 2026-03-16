@@ -5,7 +5,34 @@ import (
 	"io"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/spf13/cobra"
 )
+
+var statusCmd = &cobra.Command{
+	Use:   "status [slot]",
+	Short: "Show detailed slot status",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		useJSON, _ := cmd.Flags().GetBool("json")
+
+		a, err := bootstrap()
+		if err != nil {
+			return err
+		}
+
+		slotName := ""
+		if len(args) == 1 {
+			slotName = args[0]
+		}
+		return runStatus(a.mgr, slotName, cmd.OutOrStdout(), useJSON)
+	},
+}
+
+func init() {
+	statusCmd.Flags().Bool("json", false, "Output in JSON format")
+
+	rootCmd.AddCommand(statusCmd)
+}
 
 func runStatus(mgr slot.SlotManager, slotName string, out io.Writer, useJSON bool) error {
 	if slotName == "" {

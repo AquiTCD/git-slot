@@ -14,143 +14,60 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	flagList    bool
-	flagClear   string
-	flagSwap    []string
-	flagStatus  string
-	flagInit    bool
-	flagGlobal  bool
-	flagCreate  string
-	flagBranch  string
-	flagForce   bool
-	flagJSON    bool
-	flagVersion bool
-	flagEject   bool
-	flagHook    bool
-)
+var flagVersion bool
 
 var rootCmd = &cobra.Command{
-	Use:   "git-slot [slot] [branch]",
+	Use:   "git-slot [command]",
 	Short: "Manage git worktrees as fixed slots",
 	Long: `git-slot manages git worktrees as fixed, named slots defined in TOML configuration.
-Mount branches into slots, clear them, swap between them, and more.
+Set branches into slots, clear them, swap between them, and more.
 
-Usage as a git subcommand:
-  git slot <slot> <branch>       Mount an existing branch into a slot
-  git slot <slot> -c <branch>    Create a new branch and mount it into a slot
-  git slot <slot>                Print the slot's worktree path
-Management flags:
-  git slot -l, --list            List all slots and their status
-  git slot -d, --clear <slot>    Clear (remove) a slot's worktree
-  git slot -s, --swap <A> <B>    Swap branches between two slots
-  git slot -e, --eject           Print the repository root path (use with gsl to cd back)
-  git slot --hook               Open interactive TUI to setup post-mount hooks (use --global for global config)
-  git slot --status [slot]       Show detailed slot status
-  git slot --init                Generate a template config file`,
+Without arguments, opens interactive TUI for slot selection.`,
 	SilenceUsage:          true,
 	SilenceErrors:         true,
-	Args:                  cobra.ArbitraryArgs,
-	TraverseChildren:      true,
+	Args:                  cobra.NoArgs,
 	DisableFlagsInUseLine: true,
 	RunE:                  run,
 }
 
 func init() {
-	rootCmd.Flags().BoolVarP(&flagList, "list", "l", false, "List all slots and their status")
-	rootCmd.Flags().StringVarP(&flagClear, "clear", "d", "", "Clear (remove) a slot's worktree")
-	rootCmd.Flags().StringSliceVarP(&flagSwap, "swap", "s", nil, "Swap branches between two slots")
-	rootCmd.Flags().StringVar(&flagStatus, "status", "", "Show detailed slot status")
-	rootCmd.Flags().BoolVar(&flagInit, "init", false, "Generate a template config file")
-	rootCmd.Flags().BoolVar(&flagHook, "hook", false, "Open interactive TUI to setup post-mount hooks")
-	rootCmd.Flags().BoolVarP(&flagGlobal, "global", "g", false, "Used with --init or --hook to target global config")
-	rootCmd.Flags().StringVarP(&flagCreate, "create", "c", "", "Create a new branch and mount into slot")
-	rootCmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Alias for --create")
-	rootCmd.Flags().BoolVar(&flagForce, "force", false, "Skip confirmation for destructive actions")
-	rootCmd.Flags().BoolVarP(&flagEject, "eject", "e", false, "Print the repository root path (use with gsl to cd back)")
-	rootCmd.Flags().BoolVar(&flagJSON, "json", false, "Output in JSON format")
-	rootCmd.Flags().BoolVar(&flagVersion, "version", false, "Print version information")
+	rootCmd.Flags().BoolVarP(&flagVersion, "version", "v", false, "Print version information")
+	rootCmd.SetUsageTemplate(`Usage:
+  {{.CommandPath}} [command]{{if gt (len .Aliases) 0}}
 
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`)
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(cmd *cobra.Command, _ []string) error {
 	if flagVersion {
 		printVersion(cmd.OutOrStdout())
 		return nil
 	}
 
-	out := cmd.OutOrStdout()
-
-	if flagInit {
-		return runInit(out, flagGlobal, flagForce)
-	}
-
-	if flagHook {
+	if tui.IsTTY(os.Stdin) {
 		a, err := bootstrap()
 		if err != nil {
 			return err
 		}
-		return runHookHelper(a, out, flagGlobal)
+		return runInteractive(a, false, cmd.OutOrStdout())
 	}
-
-	if flagEject {
-		detector := git.NewExecDetector("")
-		mainRoot, err := detector.MainRepoRoot()
-		if err != nil {
-			return err
-		}
-		_, _ = fmt.Fprint(out, mainRoot)
-		return nil
-	}
-
-	if len(args) == 0 && !flagList && flagClear == "" && !cmd.Flags().Changed("swap") && !cmd.Flags().Changed("status") {
-		if tui.IsTTY(os.Stdin) {
-			a, err := bootstrap()
-			if err != nil {
-				return err
-			}
-			return runInteractive(a, flagForce, cmd.OutOrStdout())
-		}
-		return cmd.Help()
-	}
-	if len(args) > 2 {
-		return fmt.Errorf("too many arguments. Run 'git slot --help' for usage")
-	}
-
-	newBranch := flagCreate
-	if flagBranch != "" {
-		if newBranch != "" && newBranch != flagBranch {
-			return fmt.Errorf("--create and --branch cannot specify different values")
-		}
-		newBranch = flagBranch
-	}
-
-	a, err := bootstrap()
-	if err != nil {
-		return err
-	}
-
-	if flagList {
-		return runList(a.mgr, out, flagJSON)
-	}
-	if flagClear != "" {
-		return runClear(a, flagClear, flagForce, out)
-	}
-	if cmd.Flags().Changed("swap") {
-		return runSwap(a.mgr, flagSwap, out)
-	}
-	if cmd.Flags().Changed("status") {
-		return runStatus(a.mgr, flagStatus, out, flagJSON)
-	}
-
-	slotName := args[0]
-	if len(args) == 2 {
-		return runMount(a, slotName, args[1], false, flagForce, out)
-	}
-	if newBranch != "" {
-		return runMount(a, slotName, newBranch, true, flagForce, out)
-	}
-	return runGetPath(a.mgr, slotName, out)
+	return cmd.Help()
 }
 
 type app struct {

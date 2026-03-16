@@ -8,7 +8,29 @@ import (
 	"github.com/AquiTCD/git-slot/internal/hook"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/spf13/cobra"
 )
+
+var clearCmd = &cobra.Command{
+	Use:   "clear <slot>",
+	Short: "Clear (remove) a slot's worktree",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		force, _ := cmd.Flags().GetBool("force")
+
+		a, err := bootstrap()
+		if err != nil {
+			return err
+		}
+		return runClear(a, args[0], force, cmd.OutOrStdout())
+	},
+}
+
+func init() {
+	clearCmd.Flags().BoolP("force", "f", false, "Skip confirmation for destructive actions")
+
+	rootCmd.AddCommand(clearCmd)
+}
 
 func runClear(a *app, slotName string, force bool, out io.Writer) error {
 	hookRunner := hook.NewRunner(out, os.Stderr)
