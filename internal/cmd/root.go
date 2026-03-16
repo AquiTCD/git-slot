@@ -22,27 +22,36 @@ var rootCmd = &cobra.Command{
 	Long: `git-slot manages git worktrees as fixed, named slots defined in TOML configuration.
 Set branches into slots, clear them, swap between them, and more.
 
-Subcommands:
-  git slot set <slot> [branch]   Set a branch into a slot, or print slot path
-  git slot list                  List all slots and their status
-  git slot clear <slot>          Clear (remove) a slot's worktree
-  git slot swap <A> <B>          Swap branches between two slots
-  git slot status [slot]         Show detailed slot status
-  git slot init                  Generate a template config file
-  git slot hook                  Open interactive TUI to setup post-mount hooks
-  git slot root                  Print the repository root path
-
 Without arguments, opens interactive TUI for slot selection.`,
 	SilenceUsage:          true,
 	SilenceErrors:         true,
 	Args:                  cobra.NoArgs,
-	TraverseChildren:      true,
 	DisableFlagsInUseLine: true,
 	RunE:                  run,
 }
 
 func init() {
 	rootCmd.Flags().BoolVarP(&flagVersion, "version", "v", false, "Print version information")
+	rootCmd.SetUsageTemplate(`Usage:
+  {{.CommandPath}} [command]{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`)
 }
 
 func run(cmd *cobra.Command, _ []string) error {
