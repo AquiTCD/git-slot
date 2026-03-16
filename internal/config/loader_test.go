@@ -120,8 +120,6 @@ this is = broken`)
 	assert.Contains(t, err.Error(), "bad-global.toml")
 }
 
-
-
 func TestLoadConfig_ProjectOverridesSlotsBasePath(t *testing.T) {
 	dir := t.TempDir()
 	gp := writeTempConfig(t, dir, "global.toml", `

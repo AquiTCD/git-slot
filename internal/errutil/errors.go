@@ -13,7 +13,7 @@ type basicExitError struct {
 }
 
 func (e *basicExitError) Error() string { return e.msg }
-func (e *basicExitError) ExitCode() int   { return e.code }
+func (e *basicExitError) ExitCode() int { return e.code }
 
 // NewExitError creates a new error that returns the given exit code.
 func NewExitError(msg string, code int) ExitError {

@@ -32,11 +32,11 @@ type HookItem struct {
 }
 
 type HookModel struct {
-	items    []HookItem
-	cursor   int
-	done     bool
-	aborted  bool
-	noColor  bool
+	items   []HookItem
+	cursor  int
+	done    bool
+	aborted bool
+	noColor bool
 }
 
 func NewHookModel(paths []string, noColor bool) HookModel {
