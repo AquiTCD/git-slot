@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-03-16
+
+### Changed
+
+- **Breaking**: Mount now uses `git switch` instead of `worktree remove + add` for active slots. Untracked files (node_modules, .env, build caches) are preserved across branch changes within a slot.
+- **Breaking**: Removed `swap` command. Use `clear` → `set` to reassign branches between slots.
+- `--force` on `set` now maps to `git switch --discard-changes` instead of `worktree remove --force`.
+- Same-branch `set` is now a no-op (previously removed and re-added the worktree).
+
 ## [0.5.0] - 2026-03-16
 
 ### Changed
@@ -13,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `git slot set <slot> [branch]` (was: `git slot <slot> [branch]`)
   - `git slot list` (was: `git slot --list`)
   - `git slot clear <slot>` (was: `git slot -d <slot>`)
-  - `git slot swap <A> <B>` (was: `git slot --swap <A> <B>`)
+  - `git slot swap <A> <B>` (was: `git slot --swap <A> <B>`) — removed in v0.5.1
   - `git slot status [slot]` (was: `git slot --status [slot]`)
   - `git slot init` (was: `git slot --init`)
   - `git slot hook` (was: `git slot --hook`)
@@ -145,6 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.5.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.1
 [0.5.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.0
 [0.4.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.1
 [0.4.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.0
