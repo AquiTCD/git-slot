@@ -94,11 +94,12 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	if flagEject {
-		a, err := bootstrap()
+		detector := git.NewExecDetector("")
+		mainRoot, err := detector.MainRepoRoot()
 		if err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintln(out, a.repoRoot)
+		_, _ = fmt.Fprint(out, mainRoot)
 		return nil
 	}
 
