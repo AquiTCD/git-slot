@@ -15,7 +15,8 @@ type mockWorktree struct {
 	addFn           func(path, branch string) error
 	addNewBranchFn  func(path, newBranch string) error
 	removeFn        func(path string, force bool) error
-	moveFn          func(oldPath, newPath string) error
+	switchFn        func(path, branch string, discardChanges bool) error
+	switchCreateFn  func(path, newBranch string) error
 	branchExistsFn  func(branch string) (bool, error)
 	isDirtyFn       func(path string) (bool, error)
 	commitSubjectFn func(path string) (string, error)
@@ -28,8 +29,13 @@ func (m *mockWorktree) Add(path, branch string) error     { return m.addFn(path,
 func (m *mockWorktree) AddNewBranch(path, newBranch string) error {
 	return m.addNewBranchFn(path, newBranch)
 }
-func (m *mockWorktree) Remove(path string, force bool) error     { return m.removeFn(path, force) }
-func (m *mockWorktree) Move(oldPath, newPath string) error       { return m.moveFn(oldPath, newPath) }
+func (m *mockWorktree) Remove(path string, force bool) error { return m.removeFn(path, force) }
+func (m *mockWorktree) Switch(path, branch string, discardChanges bool) error {
+	return m.switchFn(path, branch, discardChanges)
+}
+func (m *mockWorktree) SwitchCreate(path, newBranch string) error {
+	return m.switchCreateFn(path, newBranch)
+}
 func (m *mockWorktree) BranchExists(branch string) (bool, error) { return m.branchExistsFn(branch) }
 func (m *mockWorktree) IsDirty(path string) (bool, error)        { return m.isDirtyFn(path) }
 func (m *mockWorktree) CommitSubject(path string) (string, error) {
@@ -224,25 +230,19 @@ func TestMount_ExistingBranch_ActiveSlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
-	var removeCalled bool
-	var addCalled bool
+	var switchCalled bool
+	var switchBranch string
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
-			if removeCalled {
-				return nil, nil
-			}
 			return []git.WorktreeInfo{
 				{Path: "/base/slots/work", Branch: "old-branch"},
 			}, nil
 		},
 		isDirtyFn:      func(path string) (bool, error) { return false, nil },
 		branchExistsFn: func(branch string) (bool, error) { return true, nil },
-		removeFn: func(path string, force bool) error {
-			removeCalled = true
-			return nil
-		},
-		addFn: func(path, branch string) error {
-			addCalled = true
+		switchFn: func(path, branch string, discard bool) error {
+			switchCalled = true
+			switchBranch = branch
 			return nil
 		},
 	}
@@ -251,8 +251,66 @@ func TestMount_ExistingBranch_ActiveSlot(t *testing.T) {
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err)
-	assert.True(t, removeCalled)
-	assert.True(t, addCalled)
+	assert.True(t, switchCalled, "should use switch instead of remove+add")
+	assert.Equal(t, "feature/x", switchBranch)
+}
+
+func TestMount_SameBranch_Noop(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	var anyCalled bool
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/x"},
+			}, nil
+		},
+		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		switchFn: func(path, branch string, discard bool) error {
+			anyCalled = true
+			return nil
+		},
+		addFn: func(path, branch string) error {
+			anyCalled = true
+			return nil
+		},
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Mount("work", "feature/x", MountOptions{})
+
+	require.NoError(t, err)
+	assert.False(t, anyCalled, "same branch should be a no-op")
+}
+
+func TestMount_CreateBranch_ActiveSlot(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	var switchCreateCalled bool
+	var switchCreateBranch string
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "old-branch"},
+			}, nil
+		},
+		isDirtyFn:      func(path string) (bool, error) { return false, nil },
+		branchExistsFn: func(branch string) (bool, error) { return false, nil },
+		switchCreateFn: func(path, newBranch string) error {
+			switchCreateCalled = true
+			switchCreateBranch = newBranch
+			return nil
+		},
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Mount("work", "feature/new", MountOptions{CreateBranch: true})
+
+	require.NoError(t, err)
+	assert.True(t, switchCreateCalled, "should use switchCreate for active slot")
+	assert.Equal(t, "feature/new", switchCreateBranch)
 }
 
 func TestMount_ExistingBranch_DirtySlot_NoForce(t *testing.T) {
@@ -279,33 +337,26 @@ func TestMount_ExistingBranch_DirtySlot_Force(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
 	}
-	var removeForce bool
-	var removeCalled bool
+	var switchDiscard bool
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
-			if removeCalled {
-				return nil, nil
-			}
 			return []git.WorktreeInfo{
 				{Path: "/base/slots/work", Branch: "old-branch"},
 			}, nil
 		},
 		isDirtyFn:      func(path string) (bool, error) { return true, nil },
 		branchExistsFn: func(branch string) (bool, error) { return true, nil },
-		removeFn: func(path string, force bool) error {
-			removeCalled = true
-			removeForce = force
+		switchFn: func(path, branch string, discard bool) error {
+			switchDiscard = discard
 			return nil
 		},
-		addFn: func(path, branch string) error { return nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{Force: true})
 
 	require.NoError(t, err)
-	assert.True(t, removeCalled)
-	assert.True(t, removeForce)
+	assert.True(t, switchDiscard, "force should pass discardChanges=true to switch")
 }
 
 func TestMount_CreateBranch_EmptySlot(t *testing.T) {
@@ -565,119 +616,6 @@ func TestClear_RemoveFails(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "remove failed")
-}
-
-// --- Swap tests ---
-
-func TestSwap_BothActive(t *testing.T) {
-	cfg := &config.Config{
-		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
-	}
-	var moveCalls []struct{ old, new string }
-	mock := &mockWorktree{
-		listFn: func() ([]git.WorktreeInfo, error) {
-			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/a"},
-				{Path: "/base/slots/hotfix", Branch: "fix/b"},
-			}, nil
-		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
-		moveFn: func(oldPath, newPath string) error {
-			moveCalls = append(moveCalls, struct{ old, new string }{oldPath, newPath})
-			return nil
-		},
-	}
-
-	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Swap("work", "hotfix")
-
-	require.NoError(t, err)
-	require.Len(t, moveCalls, 3)
-	assert.Equal(t, "/base/slots/work", moveCalls[0].old)
-	assert.Equal(t, "/base/slots/.swap-temp", moveCalls[0].new)
-	assert.Equal(t, "/base/slots/hotfix", moveCalls[1].old)
-	assert.Equal(t, "/base/slots/work", moveCalls[1].new)
-	assert.Equal(t, "/base/slots/.swap-temp", moveCalls[2].old)
-	assert.Equal(t, "/base/slots/hotfix", moveCalls[2].new)
-}
-
-func TestSwap_OneEmpty(t *testing.T) {
-	cfg := &config.Config{
-		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
-	}
-	mock := &mockWorktree{
-		listFn: func() ([]git.WorktreeInfo, error) {
-			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/a"},
-			}, nil
-		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
-	}
-
-	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Swap("work", "hotfix")
-
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrSwapRequiresBoth)
-}
-
-func TestSwap_BothEmpty(t *testing.T) {
-	cfg := &config.Config{
-		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
-	}
-	mock := &mockWorktree{
-		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
-	}
-
-	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Swap("work", "hotfix")
-
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrSwapRequiresBoth)
-}
-
-func TestSwap_UnknownSlot(t *testing.T) {
-	cfg := &config.Config{
-		Slots: []config.SlotDefinition{{Name: "work"}},
-	}
-	mock := &mockWorktree{
-		listFn: func() ([]git.WorktreeInfo, error) {
-			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/a"},
-			}, nil
-		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
-	}
-
-	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Swap("work", "nope")
-
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrSlotUnknown)
-}
-
-func TestSwap_MoveFails(t *testing.T) {
-	cfg := &config.Config{
-		Slots: []config.SlotDefinition{{Name: "work"}, {Name: "hotfix"}},
-	}
-	mock := &mockWorktree{
-		listFn: func() ([]git.WorktreeInfo, error) {
-			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/a"},
-				{Path: "/base/slots/hotfix", Branch: "fix/b"},
-			}, nil
-		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
-		moveFn: func(oldPath, newPath string) error {
-			return errors.New("move failed")
-		},
-	}
-
-	mgr := NewManager(cfg, "/base/slots", mock)
-	err := mgr.Swap("work", "hotfix")
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "move failed")
 }
 
 // --- Status tests ---

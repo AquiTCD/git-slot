@@ -178,24 +178,128 @@ func TestExecWorktree_IsDirty_Dirty(t *testing.T) {
 	assert.True(t, dirty)
 }
 
-func TestExecWorktree_Move(t *testing.T) {
+func TestExecWorktree_Switch(t *testing.T) {
 	dir := setupTestRepo(t)
-	run(t, dir, "git", "branch", "move-me")
+	run(t, dir, "git", "branch", "branch-a")
+	run(t, dir, "git", "branch", "branch-b")
 
-	oldPath := filepath.Join(t.TempDir(), "wt-old")
+	wtPath := filepath.Join(t.TempDir(), "wt-switch")
 	w := git.NewExecWorktree(dir)
-	require.NoError(t, w.Add(oldPath, "move-me"))
+	require.NoError(t, w.Add(wtPath, "branch-a"))
 
-	newPath := filepath.Join(t.TempDir(), "wt-new")
-	err := w.Move(oldPath, newPath)
+	err := w.Switch(wtPath, "branch-b", false)
 	require.NoError(t, err)
 
-	_, err = os.Stat(oldPath)
-	assert.True(t, os.IsNotExist(err))
-
-	info, err := os.Stat(newPath)
+	entries, err := w.List()
 	require.NoError(t, err)
-	assert.True(t, info.IsDir())
+
+	resolved, _ := filepath.EvalSymlinks(wtPath)
+	var found bool
+	for _, e := range entries {
+		if e.Path == resolved {
+			assert.Equal(t, "branch-b", e.Branch)
+			found = true
+		}
+	}
+	assert.True(t, found, "worktree should still exist after switch")
+}
+
+func TestExecWorktree_Switch_PreservesUntrackedFiles(t *testing.T) {
+	dir := setupTestRepo(t)
+	run(t, dir, "git", "branch", "sw-a")
+	run(t, dir, "git", "branch", "sw-b")
+
+	wtPath := filepath.Join(t.TempDir(), "wt-preserve")
+	w := git.NewExecWorktree(dir)
+	require.NoError(t, w.Add(wtPath, "sw-a"))
+
+	untrackedFile := filepath.Join(wtPath, "node_modules", "pkg.json")
+	require.NoError(t, os.MkdirAll(filepath.Dir(untrackedFile), 0o755))
+	require.NoError(t, os.WriteFile(untrackedFile, []byte("{}"), 0o644))
+
+	err := w.Switch(wtPath, "sw-b", false)
+	require.NoError(t, err)
+
+	_, err = os.Stat(untrackedFile)
+	assert.NoError(t, err, "untracked files should survive switch")
+}
+
+func TestExecWorktree_Switch_BranchInUse(t *testing.T) {
+	dir := setupTestRepo(t)
+	run(t, dir, "git", "branch", "shared")
+	run(t, dir, "git", "branch", "other")
+
+	wt1 := filepath.Join(t.TempDir(), "wt1")
+	wt2 := filepath.Join(t.TempDir(), "wt2")
+	w := git.NewExecWorktree(dir)
+	require.NoError(t, w.Add(wt1, "shared"))
+	require.NoError(t, w.Add(wt2, "other"))
+
+	err := w.Switch(wt2, "shared", false)
+	assert.Error(t, err, "switching to a branch checked out elsewhere should fail")
+}
+
+func TestExecWorktree_SwitchCreate(t *testing.T) {
+	dir := setupTestRepo(t)
+	run(t, dir, "git", "branch", "base")
+
+	wtPath := filepath.Join(t.TempDir(), "wt-create")
+	w := git.NewExecWorktree(dir)
+	require.NoError(t, w.Add(wtPath, "base"))
+
+	err := w.SwitchCreate(wtPath, "brand-new")
+	require.NoError(t, err)
+
+	entries, err := w.List()
+	require.NoError(t, err)
+
+	resolved, _ := filepath.EvalSymlinks(wtPath)
+	var found bool
+	for _, e := range entries {
+		if e.Path == resolved {
+			assert.Equal(t, "brand-new", e.Branch)
+			found = true
+		}
+	}
+	assert.True(t, found, "worktree should show new branch after switch -c")
+
+	exists, err := w.BranchExists("brand-new")
+	require.NoError(t, err)
+	assert.True(t, exists)
+}
+
+func TestExecWorktree_SwitchCreate_AlreadyExists(t *testing.T) {
+	dir := setupTestRepo(t)
+	run(t, dir, "git", "branch", "start")
+	run(t, dir, "git", "branch", "already-here")
+
+	wtPath := filepath.Join(t.TempDir(), "wt-dup")
+	w := git.NewExecWorktree(dir)
+	require.NoError(t, w.Add(wtPath, "start"))
+
+	err := w.SwitchCreate(wtPath, "already-here")
+	assert.Error(t, err, "switch -c to existing branch should fail")
+}
+
+func TestExecWorktree_Switch_DiscardChanges(t *testing.T) {
+	dir := setupTestRepo(t)
+	run(t, dir, "git", "branch", "dc-a")
+	run(t, dir, "git", "branch", "dc-b")
+
+	wtPath := filepath.Join(t.TempDir(), "wt-discard")
+	w := git.NewExecWorktree(dir)
+	require.NoError(t, w.Add(wtPath, "dc-a"))
+
+	require.NoError(t, os.WriteFile(filepath.Join(wtPath, "tracked.txt"), []byte("data"), 0o644))
+	run(t, wtPath, "git", "add", "tracked.txt")
+	run(t, wtPath, "git", "commit", "-m", "add tracked")
+	require.NoError(t, os.WriteFile(filepath.Join(wtPath, "tracked.txt"), []byte("modified"), 0o644))
+
+	err := w.Switch(wtPath, "dc-b", false)
+	assert.Error(t, err, "switch with dirty tracked files should fail without discard")
+
+	err = w.Switch(wtPath, "dc-b", true)
+	require.NoError(t, err, "switch with --discard-changes should succeed")
 }
 
 func TestExecWorktree_CommitSubject(t *testing.T) {
