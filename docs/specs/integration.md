@@ -101,7 +101,8 @@ sequenceDiagram
     SlotManager->>HookRunner: Run(pre_load)
     alt pre_load 成功
         HookRunner-->>SlotManager: exit 0
-        SlotManager->>Git: worktree add
+        SlotManager->>Git: worktree add / git switch
+        Note over SlotManager,Git: 空スロット: worktree add<br/>既存スロット: git switch
         Git-->>SlotManager: 成功
         SlotManager->>HookRunner: Run(post_load)
         HookRunner-->>SlotManager: exit 0

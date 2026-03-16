@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-Git Slot の中核機能であるスロットの CRUD 操作を定義する。スロットは TOML 設定で名前が定義され、gwq 準拠のパスに Git Worktree を配置する。ブランチの装填（Load）・解除（Clear）・入れ替え（Swap）・一覧表示（List）を提供する。
+Git Slot の中核機能であるスロットの CRUD 操作を定義する。スロットは TOML 設定で名前が定義され、gwq 準拠のパスに Git Worktree を配置する。ブランチの装填（Load）・解除（Clear）・一覧表示（List）を提供する。
 
 ## 2. PRD (Product Requirements)
 
@@ -24,15 +24,11 @@ Git Slot の中核機能であるスロットの CRUD 操作を定義する。�
 
 > 開発者として、全スロットの現在の状態を一覧で確認したい。それにより、どのスロットが使用中か、どのブランチが割り当てられているかを把握できる。
 
-#### US-CORE-005: スロット間のブランチ入れ替え
-
-> 開発者として、2つのスロット間でブランチを入れ替えたい。それにより、作業の優先度変更に応じてスロット配置を調整できる。
-
-#### US-CORE-006: ブランチ重複の防止
+#### US-CORE-005: ブランチ重複の防止
 
 > 開発者として、同じブランチが複数のスロット（および gwq worktree）に装填されることを防ぎたい。それにより、意図しない競合を回避できる。
 
-#### US-CORE-007: Dirty 状態の保護
+#### US-CORE-006: Dirty 状態の保護
 
 > 開発者として、未コミットの変更があるスロットを誤って解除しないようにしたい。それにより、作業中のデータ損失を防げる。
 
@@ -46,9 +42,8 @@ Git Slot の中核機能であるスロットの CRUD 操作を定義する。�
 | AC-CORE-004 | US-CORE-003 | `git slot -d <slot>` で worktree が削除され、スロットが Empty になる |
 | AC-CORE-005 | US-CORE-003 | Dirty 状態のスロットに対して `clear` は確認プロンプトを表示する |
 | AC-CORE-006 | US-CORE-004 | `git slot --list` で全スロットの名前・状態・ブランチ・dirty フラグが表示される |
-| AC-CORE-007 | US-CORE-005 | `git slot --swap <A> <B>` で両スロットのブランチが入れ替わる |
-| AC-CORE-008 | US-CORE-006 | 既に他スロットまたは gwq worktree で使用中のブランチを Load しようとするとエラーになる |
-| AC-CORE-009 | US-CORE-007 | `--force` フラグで Dirty 状態の確認をスキップできる |
+| AC-CORE-007 | US-CORE-005 | 既に他スロットまたは gwq worktree で使用中のブランチを Load しようとするとエラーになる |
+| AC-CORE-008 | US-CORE-006 | `--force` フラグで Dirty 状態の確認をスキップできる |
 
 ### 2.3 Out of Scope
 
@@ -66,14 +61,13 @@ graph TB
     subgraph "Slot Manager"
         LOAD["Load(slot, branch, opts)"]
         CLEAR["Clear(slot, opts)"]
-        SWAP["Swap(slotA, slotB)"]
         LIST["List()"]
     end
 
     subgraph "Git Layer"
         WT_ADD["git worktree add"]
         WT_RM["git worktree remove"]
-        WT_MV["git worktree move"]
+        WT_SWITCH["git switch"]
         WT_LIST["git worktree list"]
         BR_CHECK["git rev-parse --verify"]
     end
@@ -86,9 +80,9 @@ graph TB
     LOAD --> BR_CHECK
     LOAD --> DUP
     LOAD --> WT_ADD
+    LOAD --> WT_SWITCH
     CLEAR --> DIRTY
     CLEAR --> WT_RM
-    SWAP --> WT_MV
     LIST --> WT_LIST
 ```
 
@@ -147,12 +141,15 @@ Load(slotName, branchName, opts):
   5. IF opts.CreateBranch:
        IF branchName が既に存在:
          return Error("ブランチ '{branch}' は既に存在します")
-       git worktree add <slot.Path> -b <branchName>
+       IF slot.State == SlotActive:
+         cd <slot.Path> && git switch -c <branchName>
+       ELSE:
+         git worktree add <slot.Path> -b <branchName>
      ELSE:
        IF branchName がローカル/リモートに存在しない:
          return Error("ブランチ '{branch}' が見つかりません。-c で新規作成できます")
-       IF slot.State != Empty:
-         cd <slot.Path> && git checkout <branchName>
+       IF slot.State == SlotActive:
+         cd <slot.Path> && git switch <branchName> [--discard-changes]
        ELSE:
          git worktree add <slot.Path> <branchName>
 
@@ -179,24 +176,7 @@ Clear(slotName, opts):
   7. return Success
 ```
 
-#### 3.3.3 Swap 操作
-
-```
-Swap(slotNameA, slotNameB):
-  1. slotA = ResolveSlot(slotNameA)
-  2. slotB = ResolveSlot(slotNameB)
-
-  3. IF slotA.State == Empty OR slotB.State == Empty:
-       return Error("両方のスロットにブランチが装填されている必要があります")
-
-  4. tempPath = <slots-base>/.swap-temp
-  5. git worktree move <slotA.Path> <tempPath>
-  6. git worktree move <slotB.Path> <slotA.Path>
-  7. git worktree move <tempPath> <slotB.Path>
-  8. return Success
-```
-
-#### 3.3.4 List 操作
+#### 3.3.3 List 操作
 
 ```
 List():
@@ -217,7 +197,7 @@ List():
   4. return slots
 ```
 
-#### 3.3.5 パス解決（gwq 準拠）
+#### 3.3.4 パス解決（gwq 準拠）
 
 gwq はデフォルトで `~/worktrees/{host}/{owner}/{repo}/{branch}` に worktree を配置する。git-slot はこの同じ階層内に `slots/` ディレクトリを作成する。
 
@@ -250,7 +230,6 @@ ResolveSlotPath(slotName):
 | ブランチ重複 | E_BRANCH_DUPLICATE | "ブランチ '{branch}' はスロット '{slot}' で使用中です" |
 | スロット既空 | E_SLOT_ALREADY_EMPTY | "スロット '{name}' は既に空です" |
 | Dirty 状態 | E_SLOT_DIRTY | "スロット '{name}' に未コミットの変更があります。--force で強制実行できます" |
-| Swap 片方空 | E_SWAP_EMPTY | "Swap には両方のスロットにブランチが装填されている必要があります" |
 | worktree 操作失敗 | E_WORKTREE_FAILED | "Git worktree 操作に失敗しました: {detail}" |
 | リポジトリ外実行 | E_NOT_IN_REPO | "Git リポジトリ内で実行してください" |
 | 設定未初期化 | E_NO_CONFIG | "git-slot.toml が見つかりません。`git slot --init` で作成してください" |
@@ -265,6 +244,5 @@ ResolveSlotPath(slotName):
 | List | Phase 2 | P0 |
 | ブランチ重複検出 | Phase 2 | P0 |
 | Dirty 状態検出・警告 | Phase 2 | P0 |
-| Swap | Phase 2 | P1 |
 | --force フラグ | Phase 2 | P1 |
-| Load 時のブランチ切り替え（既存スロット） | Phase 2 | P1 |
+| Load 時のブランチ切り替え（既存スロット: `git switch`） | Phase 2 | P1 |

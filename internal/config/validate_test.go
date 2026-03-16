@@ -79,15 +79,6 @@ func TestValidate_InvalidCharacters(t *testing.T) {
 	assert.Equal(t, "my slot!", target.Name)
 }
 
-func TestValidate_ReservedName(t *testing.T) {
-	cfg := &Config{Slots: slots(".swap-temp")}
-	err := Validate(cfg)
-
-	var target *ErrReservedSlotName
-	require.ErrorAs(t, err, &target)
-	assert.Equal(t, ".swap-temp", target.Name)
-}
-
 func TestValidate_UnicodeName(t *testing.T) {
 	cfg := &Config{Slots: slots("スロット")}
 	err := Validate(cfg)

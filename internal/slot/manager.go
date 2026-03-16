@@ -14,7 +14,6 @@ type SlotManager interface {
 	GetPath(slotName string) (string, error)
 	Mount(slotName, branchName string, opts MountOptions) error
 	Clear(slotName string, opts ClearOptions) error
-	Swap(slotNameA, slotNameB string) error
 	Status(slotName string) (*SlotStatus, error)
 	StatusAll() ([]SlotStatus, error)
 }
@@ -110,6 +109,10 @@ func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 
+	if slot.State == SlotActive && slot.Branch == branchName {
+		return nil
+	}
+
 	worktrees, err := m.fetchWorktrees()
 	if err != nil {
 		return err
@@ -134,10 +137,9 @@ func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 		}
 
 		if slot.State == SlotActive {
-			if err := m.wt.Remove(slot.Path, opts.Force); err != nil {
-				return err
-			}
+			err = m.wt.SwitchCreate(slot.Path, branchName)
 			m.invalidateCache()
+			return err
 		}
 		err = m.wt.AddNewBranch(slot.Path, branchName)
 		m.invalidateCache()
@@ -153,10 +155,9 @@ func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 	}
 
 	if slot.State == SlotActive {
-		if err := m.wt.Remove(slot.Path, opts.Force); err != nil {
-			return err
-		}
+		err = m.wt.Switch(slot.Path, branchName, opts.Force)
 		m.invalidateCache()
+		return err
 	}
 	err = m.wt.Add(slot.Path, branchName)
 	m.invalidateCache()
@@ -182,32 +183,6 @@ func (m *Manager) Clear(slotName string, opts ClearOptions) error {
 	}
 
 	err = m.wt.Remove(slot.Path, opts.Force)
-	m.invalidateCache()
-	return err
-}
-
-func (m *Manager) Swap(slotNameA, slotNameB string) error {
-	slotA, err := m.resolveSlot(slotNameA)
-	if err != nil {
-		return err
-	}
-	slotB, err := m.resolveSlot(slotNameB)
-	if err != nil {
-		return err
-	}
-
-	if slotA.State == SlotEmpty || slotB.State == SlotEmpty {
-		return ErrSwapRequiresBoth
-	}
-
-	tempPath := filepath.Join(m.basePath, ".swap-temp")
-	if err := m.wt.Move(slotA.Path, tempPath); err != nil {
-		return err
-	}
-	if err := m.wt.Move(slotB.Path, slotA.Path); err != nil {
-		return err
-	}
-	err = m.wt.Move(tempPath, slotB.Path)
 	m.invalidateCache()
 	return err
 }

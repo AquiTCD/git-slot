@@ -20,7 +20,7 @@ var rootCmd = &cobra.Command{
 	Use:   "git-slot [command]",
 	Short: "Manage git worktrees as fixed slots",
 	Long: `git-slot manages git worktrees as fixed, named slots defined in TOML configuration.
-Set branches into slots, clear them, swap between them, and more.
+Set branches into slots, clear them, and more.
 
 Without arguments, opens interactive TUI for slot selection.`,
 	SilenceUsage:          true,

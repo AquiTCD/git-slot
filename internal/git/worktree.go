@@ -19,7 +19,8 @@ type Worktree interface {
 	Add(path, branch string) error
 	AddNewBranch(path, newBranch string) error
 	Remove(path string, force bool) error
-	Move(oldPath, newPath string) error
+	Switch(path, branch string, discardChanges bool) error
+	SwitchCreate(path, newBranch string) error
 	BranchExists(branch string) (bool, error)
 	IsDirty(path string) (bool, error)
 	CommitSubject(path string) (string, error)
@@ -153,11 +154,22 @@ func (w *ExecWorktree) IsDirty(path string) (bool, error) {
 	return strings.TrimSpace(string(out)) != "", nil
 }
 
-func (w *ExecWorktree) Move(oldPath, newPath string) error {
-	cmd := exec.Command("git", "worktree", "move", oldPath, newPath)
-	cmd.Dir = w.dir
+func (w *ExecWorktree) Switch(path, branch string, discardChanges bool) error {
+	args := []string{"-C", path, "switch", branch}
+	if discardChanges {
+		args = []string{"-C", path, "switch", "--discard-changes", branch}
+	}
+	cmd := exec.Command("git", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git worktree move: %s", strings.TrimSpace(string(out)))
+		return fmt.Errorf("git switch: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+	return nil
+}
+
+func (w *ExecWorktree) SwitchCreate(path, newBranch string) error {
+	cmd := exec.Command("git", "-C", path, "switch", "-c", newBranch)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git switch -c: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }

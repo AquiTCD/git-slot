@@ -18,7 +18,6 @@ type mockSlotManager struct {
 	getPathFn   func(string) (string, error)
 	mountFn     func(string, string, slot.MountOptions) error
 	clearFn     func(string, slot.ClearOptions) error
-	swapFn      func(string, string) error
 	statusFn    func(string) (*slot.SlotStatus, error)
 	statusAllFn func() ([]slot.SlotStatus, error)
 }
@@ -47,13 +46,6 @@ func (m *mockSlotManager) Mount(slotName, branchName string, opts slot.MountOpti
 func (m *mockSlotManager) Clear(slotName string, opts slot.ClearOptions) error {
 	if m.clearFn != nil {
 		return m.clearFn(slotName, opts)
-	}
-	return nil
-}
-
-func (m *mockSlotManager) Swap(a, b string) error {
-	if m.swapFn != nil {
-		return m.swapFn(a, b)
 	}
 	return nil
 }
@@ -144,46 +136,6 @@ func TestRunGetPath_Error(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := runGetPath(mgr, "unknown", &buf)
-	require.Error(t, err)
-}
-
-// --- runSwap tests ---
-
-func TestRunSwap_Success(t *testing.T) {
-	called := false
-	mgr := &mockSlotManager{
-		swapFn: func(a, b string) error {
-			called = true
-			assert.Equal(t, "work", a)
-			assert.Equal(t, "hotfix", b)
-			return nil
-		},
-	}
-
-	var buf bytes.Buffer
-	err := runSwap(mgr, []string{"work", "hotfix"}, &buf)
-	require.NoError(t, err)
-	assert.True(t, called)
-}
-
-func TestRunSwap_WrongArgCount(t *testing.T) {
-	mgr := &mockSlotManager{}
-
-	var buf bytes.Buffer
-	err := runSwap(mgr, []string{"only-one"}, &buf)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "exactly 2 slot names")
-}
-
-func TestRunSwap_Error(t *testing.T) {
-	mgr := &mockSlotManager{
-		swapFn: func(a, b string) error {
-			return errors.New("swap failed")
-		},
-	}
-
-	var buf bytes.Buffer
-	err := runSwap(mgr, []string{"a", "b"}, &buf)
 	require.Error(t, err)
 }
 
