@@ -108,6 +108,61 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 	return updateConfigWithHooks(a, results, out, global)
 }
 
+func aggregateItems(items []tui.HookItem, threshold int) []*tui.HookItem {
+	groups := make(map[string][]*tui.HookItem)
+	type entry struct {
+		isGroup bool
+		parent  string
+		item    *tui.HookItem
+	}
+	var order []entry
+	seen := make(map[string]bool)
+
+	for i := range items {
+		item := &items[i]
+
+		if item.IsDir && !strings.Contains(strings.TrimSuffix(item.Path, "/"), "/") {
+			order = append(order, entry{item: item})
+			continue
+		}
+
+		parts := strings.SplitN(item.Path, "/", 2)
+		if len(parts) < 2 {
+			order = append(order, entry{item: item})
+			continue
+		}
+
+		parent := parts[0] + "/"
+		groups[parent] = append(groups[parent], item)
+		if !seen[parent] {
+			seen[parent] = true
+			order = append(order, entry{isGroup: true, parent: parent})
+		}
+	}
+
+	var result []*tui.HookItem
+	for _, e := range order {
+		if !e.isGroup {
+			result = append(result, e.item)
+			continue
+		}
+		children := groups[e.parent]
+		if len(children) >= threshold {
+			dirItem := &tui.HookItem{
+				Path:       e.parent,
+				IsDir:      true,
+				ChildCount: len(children),
+				Children:   children,
+			}
+			result = append(result, dirItem)
+		} else {
+			result = append(result, children...)
+		}
+	}
+
+	return result
+}
+
 const hookManagedMarker = "# --- Managed by git-slot --hook ---"
 
 func buildPostMountHooks(existingHooks []config.HookAction, items []tui.HookItem) ([]config.HookAction, bool) {

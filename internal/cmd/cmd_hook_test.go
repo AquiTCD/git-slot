@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/AquiTCD/git-slot/internal/tui"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateConfigWithHooks(t *testing.T) {
@@ -52,4 +54,77 @@ func TestUpdateConfigWithHooks(t *testing.T) {
 	if strings.Contains(tomlContent, "ignored.txt") {
 		t.Errorf("ActionNone item should not be in the TOML")
 	}
+}
+
+func TestAggregateItems_BelowThreshold(t *testing.T) {
+	items := []tui.HookItem{
+		{Path: ".env"},
+		{Path: "vendor/"},
+		{Path: "node_modules/"},
+	}
+	result := aggregateItems(items, 3)
+	require.Len(t, result, 3)
+	assert.Equal(t, ".env", result[0].Path)
+}
+
+func TestAggregateItems_AboveThreshold(t *testing.T) {
+	items := []tui.HookItem{
+		{Path: "storage/a/"},
+		{Path: "storage/b/"},
+		{Path: "storage/c/"},
+		{Path: "storage/d/"},
+		{Path: ".env"},
+	}
+	result := aggregateItems(items, 3)
+	require.Len(t, result, 2)
+
+	assert.Equal(t, "storage/", result[0].Path)
+	assert.True(t, result[0].IsDir)
+	assert.Equal(t, 4, result[0].ChildCount)
+	require.Len(t, result[0].Children, 4)
+	assert.Equal(t, "storage/a/", result[0].Children[0].Path)
+
+	assert.Equal(t, ".env", result[1].Path)
+}
+
+func TestAggregateItems_PreservesOriginalDir(t *testing.T) {
+	items := []tui.HookItem{
+		{Path: "vendor/", IsDir: true},
+		{Path: ".env"},
+	}
+	result := aggregateItems(items, 3)
+	require.Len(t, result, 2)
+	assert.Equal(t, "vendor/", result[0].Path)
+	assert.True(t, result[0].IsDir)
+	assert.Equal(t, 0, result[0].ChildCount)
+}
+
+func TestAggregateItems_NestedAggregation(t *testing.T) {
+	items := []tui.HookItem{
+		{Path: "cache/a/x"},
+		{Path: "cache/a/y"},
+		{Path: "cache/a/z"},
+		{Path: "cache/b/x"},
+	}
+	result := aggregateItems(items, 3)
+	require.Len(t, result, 1)
+	assert.Equal(t, "cache/", result[0].Path)
+	assert.Equal(t, 4, result[0].ChildCount)
+}
+
+func TestAggregateItems_MixedDepths(t *testing.T) {
+	items := []tui.HookItem{
+		{Path: "dist/foo.dmg"},
+		{Path: "dist/bar.zip"},
+		{Path: "dist/baz.tar"},
+		{Path: "dist/sub/deep.txt"},
+		{Path: ".env"},
+		{Path: "tmp/"},
+	}
+	result := aggregateItems(items, 3)
+	require.Len(t, result, 3)
+	assert.Equal(t, "dist/", result[0].Path)
+	assert.Equal(t, 4, result[0].ChildCount)
+	assert.Equal(t, ".env", result[1].Path)
+	assert.Equal(t, "tmp/", result[2].Path)
 }

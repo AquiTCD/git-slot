@@ -26,9 +26,21 @@ func (a HookAction) String() string {
 	}
 }
 
+func (a HookAction) Next() HookAction {
+	return (a + 1) % 3
+}
+
+func (a HookAction) Prev() HookAction {
+	return (a + 2) % 3
+}
+
 type HookItem struct {
-	Path   string
-	Action HookAction
+	Path       string
+	Action     HookAction
+	IsDir      bool
+	Expanded   bool
+	Children   []*HookItem
+	ChildCount int
 }
 
 type HookModel struct {
