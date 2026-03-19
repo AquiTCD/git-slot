@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-03-16
+
+### Added
+
+- **Tree-based hook TUI**: `git slot hook` now aggregates ignored files by directory, collapsing sibling entries into a single expandable row when 3+ share a parent.
+- **fzf-style filter**: Always-on text input filters the hook list in real time, matching by path substring.
+- **Tab/Shift+Tab toggle**: Cycles action (None → Link → Copy) on the current item. On aggregated directories, applies to all children.
+- **Directory expansion**: Enter/→ drills into directories; children are loaded on demand via `git ls-files`. ←/Esc/Backspace(empty) collapses back.
+- **[Mixed] indicator**: When children of a directory have different actions, the parent shows `[Mixed]` instead of a single action.
+- `ListIgnoredFilesIn(dir)` method on `ExecWorktree` for on-demand directory expansion.
+
+### Changed
+
+- Hook TUI keybindings unified with interactive slot selector: ctrl+j/k for navigation, ctrl+s to confirm, ctrl+c/esc to cancel.
+
 ## [0.5.1] - 2026-03-16
 
 ### Changed
@@ -154,6 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.6.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.6.0
 [0.5.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.1
 [0.5.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.0
 [0.4.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.4.1
