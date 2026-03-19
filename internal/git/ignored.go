@@ -35,6 +35,34 @@ func (w *ExecWorktree) ListIgnoredFiles() ([]IgnoredFile, error) {
 	return ignored, nil
 }
 
+// DirExpander can list ignored files within a specific directory on demand.
+type DirExpander interface {
+	ListIgnoredFilesIn(dir string) ([]IgnoredFile, error)
+}
+
+// ListIgnoredFilesIn returns ignored files within a specific directory (without --directory, so individual files are listed).
+func (w *ExecWorktree) ListIgnoredFilesIn(dir string) ([]IgnoredFile, error) {
+	cmd := exec.Command("git", "ls-files", "--others", "--ignored", "--exclude-standard", dir)
+	cmd.Dir = w.dir
+
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("git ls-files in %s: %w", dir, err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+	var ignored []IgnoredFile
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		ignored = append(ignored, IgnoredFile{Path: line})
+	}
+	return ignored, nil
+}
+
 // IsIgnored checks if the given path is ignored by git
 func (w *ExecWorktree) IsIgnored(path string) (bool, error) {
 	cmd := exec.Command("git", "check-ignore", "-q", path)

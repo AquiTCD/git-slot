@@ -79,3 +79,37 @@ func TestIsIgnored_Directory(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, ignored)
 }
+
+func TestListIgnoredFilesIn_ExpandsDirectory(t *testing.T) {
+	dir := setupRepoWithIgnored(t)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "secret", "sub"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "secret", "sub", "deep.txt"), []byte("deep"), 0644))
+
+	wt := git.NewExecWorktree(dir)
+	files, err := wt.ListIgnoredFilesIn("secret/")
+	require.NoError(t, err)
+
+	paths := make([]string, len(files))
+	for i, f := range files {
+		paths[i] = f.Path
+	}
+
+	assert.Contains(t, paths, "secret/key.pem")
+	assert.Contains(t, paths, "secret/sub/deep.txt")
+	assert.NotContains(t, paths, "ignored.txt")
+}
+
+func TestListIgnoredFilesIn_EmptyDir(t *testing.T) {
+	dir := setupTestRepo(t)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("empty_dir/\n"), 0644))
+	run(t, dir, "git", "add", ".gitignore")
+	run(t, dir, "git", "commit", "-m", "add gitignore")
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "empty_dir"), 0755))
+
+	wt := git.NewExecWorktree(dir)
+	files, err := wt.ListIgnoredFilesIn("empty_dir/")
+	require.NoError(t, err)
+	assert.Empty(t, files)
+}
