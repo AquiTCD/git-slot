@@ -66,10 +66,9 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 		return fmt.Errorf("failed to list ignored files: %w", err)
 	}
 
-	var items []tui.HookItem
+	var flatItems []tui.HookItem
 	for _, f := range files {
 		action := tui.ActionNone
-		// Check if this file already has a hook configured
 		potentialSrc := filepath.Join("$GSL_REPO_ROOT", f.Path)
 		for _, h := range existingHooks {
 			if h.Source == potentialSrc {
@@ -82,16 +81,32 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 				break
 			}
 		}
-		items = append(items, tui.HookItem{Path: f.Path, Action: action})
+		isDir := strings.HasSuffix(f.Path, "/")
+		flatItems = append(flatItems, tui.HookItem{Path: f.Path, Action: action, IsDir: isDir})
 	}
 
-	if len(items) == 0 {
+	if len(flatItems) == 0 {
 		_, _ = fmt.Fprintln(out, "No ignored files found to setup hooks for.")
 		return nil
 	}
 
+	treeItems := aggregateItems(flatItems, 3)
+
+	expandFn := func(dir string) ([]*tui.HookItem, error) {
+		expanded, err := wt.ListIgnoredFilesIn(dir)
+		if err != nil {
+			return nil, err
+		}
+		var children []*tui.HookItem
+		for _, f := range expanded {
+			isDir := strings.HasSuffix(f.Path, "/")
+			children = append(children, &tui.HookItem{Path: f.Path, IsDir: isDir})
+		}
+		return children, nil
+	}
+
 	noColor := tui.IsNoColor()
-	model := tui.NewHookModelFromItems(items, noColor)
+	model := tui.NewHookTreeModel(treeItems, expandFn, noColor)
 
 	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
 	finalModel, err := p.Run()
