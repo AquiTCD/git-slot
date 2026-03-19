@@ -66,10 +66,9 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 		return fmt.Errorf("failed to list ignored files: %w", err)
 	}
 
-	var items []tui.HookItem
+	var flatItems []tui.HookItem
 	for _, f := range files {
 		action := tui.ActionNone
-		// Check if this file already has a hook configured
 		potentialSrc := filepath.Join("$GSL_REPO_ROOT", f.Path)
 		for _, h := range existingHooks {
 			if h.Source == potentialSrc {
@@ -82,16 +81,32 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 				break
 			}
 		}
-		items = append(items, tui.HookItem{Path: f.Path, Action: action})
+		isDir := strings.HasSuffix(f.Path, "/")
+		flatItems = append(flatItems, tui.HookItem{Path: f.Path, Action: action, IsDir: isDir})
 	}
 
-	if len(items) == 0 {
+	if len(flatItems) == 0 {
 		_, _ = fmt.Fprintln(out, "No ignored files found to setup hooks for.")
 		return nil
 	}
 
+	treeItems := aggregateItems(flatItems, 3)
+
+	expandFn := func(dir string) ([]*tui.HookItem, error) {
+		expanded, err := wt.ListIgnoredFilesIn(dir)
+		if err != nil {
+			return nil, err
+		}
+		var children []*tui.HookItem
+		for _, f := range expanded {
+			isDir := strings.HasSuffix(f.Path, "/")
+			children = append(children, &tui.HookItem{Path: f.Path, IsDir: isDir})
+		}
+		return children, nil
+	}
+
 	noColor := tui.IsNoColor()
-	model := tui.NewHookModelFromItems(items, noColor)
+	model := tui.NewHookTreeModel(treeItems, expandFn, noColor)
 
 	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
 	finalModel, err := p.Run()
@@ -106,6 +121,61 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 
 	results := m.GetResults()
 	return updateConfigWithHooks(a, results, out, global)
+}
+
+func aggregateItems(items []tui.HookItem, threshold int) []*tui.HookItem {
+	groups := make(map[string][]*tui.HookItem)
+	type entry struct {
+		isGroup bool
+		parent  string
+		item    *tui.HookItem
+	}
+	var order []entry
+	seen := make(map[string]bool)
+
+	for i := range items {
+		item := &items[i]
+
+		if item.IsDir && !strings.Contains(strings.TrimSuffix(item.Path, "/"), "/") {
+			order = append(order, entry{item: item})
+			continue
+		}
+
+		parts := strings.SplitN(item.Path, "/", 2)
+		if len(parts) < 2 {
+			order = append(order, entry{item: item})
+			continue
+		}
+
+		parent := parts[0] + "/"
+		groups[parent] = append(groups[parent], item)
+		if !seen[parent] {
+			seen[parent] = true
+			order = append(order, entry{isGroup: true, parent: parent})
+		}
+	}
+
+	var result []*tui.HookItem
+	for _, e := range order {
+		if !e.isGroup {
+			result = append(result, e.item)
+			continue
+		}
+		children := groups[e.parent]
+		if len(children) >= threshold {
+			dirItem := &tui.HookItem{
+				Path:       e.parent,
+				IsDir:      true,
+				ChildCount: len(children),
+				Children:   children,
+			}
+			result = append(result, dirItem)
+		} else {
+			result = append(result, children...)
+		}
+	}
+
+	return result
 }
 
 const hookManagedMarker = "# --- Managed by git-slot --hook ---"
