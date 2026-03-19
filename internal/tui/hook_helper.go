@@ -271,7 +271,7 @@ func (m HookModel) View() string {
 
 	if len(m.navStack) > 0 {
 		dir := m.navStack[len(m.navStack)-1]
-		b.WriteString(fmt.Sprintf("▼ %s\n", dir))
+		fmt.Fprintf(&b, "▼ %s\n", dir)
 	}
 
 	b.WriteString(m.filterInput.View())
@@ -302,7 +302,7 @@ func (m HookModel) View() string {
 			path = StyleSelected.Render(path)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%-10s %s%s\n", cursor, actionStr, path, suffix))
+		fmt.Fprintf(&b, "%s%-10s %s%s\n", cursor, actionStr, path, suffix)
 	}
 
 	if len(m.navStack) > 0 {
