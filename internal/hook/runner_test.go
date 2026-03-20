@@ -136,7 +136,7 @@ echo "hello stderr" >&2
 func TestHandleLink_CreatesSymlink(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.txt")
-	require.NoError(t, os.WriteFile(src, []byte("hello"), 0644))
+	require.NoError(t, os.WriteFile(src, []byte("hello"), 0o644))
 
 	dest := filepath.Join(dir, "sub", "link.txt")
 
@@ -157,10 +157,10 @@ func TestHandleLink_CreatesSymlink(t *testing.T) {
 func TestHandleLink_ReplacesExisting(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.txt")
-	require.NoError(t, os.WriteFile(src, []byte("new"), 0644))
+	require.NoError(t, os.WriteFile(src, []byte("new"), 0o644))
 
 	dest := filepath.Join(dir, "link.txt")
-	require.NoError(t, os.WriteFile(dest, []byte("old"), 0644))
+	require.NoError(t, os.WriteFile(dest, []byte("old"), 0o644))
 
 	r := NewRunner(os.Stdout, os.Stderr)
 	err := r.Run([]config.HookAction{{
@@ -194,7 +194,7 @@ func TestHandleLink_MissingSrc(t *testing.T) {
 func TestHandleLink_ExpandsEnvVars(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.txt")
-	require.NoError(t, os.WriteFile(src, []byte("data"), 0644))
+	require.NoError(t, os.WriteFile(src, []byte("data"), 0o644))
 
 	r := NewRunner(os.Stdout, os.Stderr)
 	err := r.Run([]config.HookAction{{
@@ -217,7 +217,7 @@ func TestHandleLink_ExpandsEnvVars(t *testing.T) {
 func TestHandleCopy_CopiesFile(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.txt")
-	require.NoError(t, os.WriteFile(src, []byte("content"), 0644))
+	require.NoError(t, os.WriteFile(src, []byte("content"), 0o644))
 
 	dest := filepath.Join(dir, "sub", "copy.txt")
 
@@ -238,8 +238,8 @@ func TestHandleCopy_CopiesFile(t *testing.T) {
 func TestHandleCopy_CopiesDirectory(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "srcdir")
-	require.NoError(t, os.MkdirAll(srcDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("aaa"), 0644))
+	require.NoError(t, os.MkdirAll(srcDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("aaa"), 0o644))
 
 	dest := filepath.Join(dir, "destdir")
 
@@ -275,10 +275,10 @@ func TestHandleCopy_MissingSrc(t *testing.T) {
 func TestHandleCopy_ReplacesExisting(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.txt")
-	require.NoError(t, os.WriteFile(src, []byte("new"), 0644))
+	require.NoError(t, os.WriteFile(src, []byte("new"), 0o644))
 
 	dest := filepath.Join(dir, "copy.txt")
-	require.NoError(t, os.WriteFile(dest, []byte("old"), 0644))
+	require.NoError(t, os.WriteFile(dest, []byte("old"), 0o644))
 
 	r := NewRunner(os.Stdout, os.Stderr)
 	err := r.Run([]config.HookAction{{

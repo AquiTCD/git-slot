@@ -75,7 +75,7 @@ func (r *Runner) resolveAndPrepare(action config.HookAction, env HookEnv, hookTy
 		return "", "", fmt.Errorf("%s hook: missing source or destination", hookType)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return "", "", err
 	}
 
@@ -129,7 +129,8 @@ func (r *Runner) handleRun(action config.HookAction, env HookEnv) error {
 		if ctx.Err() == context.DeadlineExceeded {
 			return fmt.Errorf("command '%s': %w", command, ErrHookTimeout)
 		}
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("command '%s' failed with exit code %d: %w", command, exitErr.ExitCode(), ErrHookFailed)
 		}
 		return fmt.Errorf("command '%s': %w", command, ErrHookFailed)
