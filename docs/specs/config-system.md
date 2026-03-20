@@ -76,14 +76,16 @@ graph LR
 
 ```go
 type Config struct {
-    GwqBaseDir    string           `toml:"gwq_basedir"`
     SlotsBasePath string           `toml:"slots_base_path"`
+    LaunchShell   bool             `toml:"launch_shell"`
     Slots         []SlotDefinition `toml:"slots"`
     Hooks         HooksConfig      `toml:"hooks"`
 }
 
 type SlotDefinition struct {
-    Name string `toml:"name"`
+    Name string            `toml:"name"`
+    Icon string            `toml:"icon"`
+    Env  map[string]string `toml:"env"`
 }
 
 type HooksConfig struct {
@@ -109,12 +111,25 @@ type HooksConfig struct {
 # 設定した場合、gwq のパス規則を無視してこのパスの下にスロットを作成する
 # slots_base_path = "/custom/path/to/slots"
 
+# サブシェルモード（デフォルト: false）
+# true にすると set/TUI でスロット選択後にサブシェルが起動する
+# launch_shell = true
+
 # スロット定義（名前は自由）
 [[slots]]
 name = "main-work"
+icon = "🚀"
+
+[slots.env]
+PORT = "3001"
+APP_ENV = "slot-dev"
 
 [[slots]]
 name = "hotfix"
+icon = "🔥"
+
+[slots.env]
+PORT = "3002"
 
 [[slots]]
 name = "experiment"
@@ -178,8 +193,10 @@ LoadConfig():
 ```
 
 マージルール:
-- スカラー値（`gwq_basedir`, `slots_base_path` 等）: 後勝ち（上書き）
+- スカラー値（`slots_base_path` 等）: 後勝ち（上書き）
+- `launch_shell`: OR マージ（どちらかが true なら true）
 - `[[slots]]` 配列: **全体置換**。プロジェクト設定に `[[slots]]` があれば、グローバル設定のスロットは無視される
+- `[[slots]]` の `env`: スロット単位で全体置換（同名スロットの override 時）
 - `[hooks]`: フィールド単位でマージ（未指定フィールドはグローバル設定を維持）
 
 #### 3.3.4 プロジェクト設定の検索

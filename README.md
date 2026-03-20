@@ -21,6 +21,7 @@ Git Slot は、`git worktree` を TOML 設定で定義された固定名のス�
 - **安全ガード** — ブランチ重複検出、dirty 状態の保護を備えています
 - **インタラクティブ TUI** — スロット選択・ブランチ入力を対話的に操作できます（あいまいフィルタ対応）
 - **Git サブコマンド** — `git slot` として自然に使えます
+- **サブシェルモード** — スロット内でサブシェルを起動し、GSL_* 環境変数を自動エクスポートします
 
 ## Git Slot の本質
 
@@ -136,6 +137,40 @@ git slot clear main-work
 git slot clear main-work -f
 ```
 
+## サブシェルモード
+
+`git slot shell` でスロット内のサブシェルを起動できます。シェルには GSL_* 環境変数とスロット設定の env が自動的にエクスポートされます。
+
+```bash
+# スロットのサブシェルに入る
+git slot shell main-work
+
+# 環境変数が利用可能
+echo $GSL_SLOT_NAME   # main-work
+echo $PORT            # 3001（slots.env で定義した値）
+
+# サブシェルを終了
+exit
+```
+
+### launch_shell 設定
+
+`launch_shell = true` を設定すると、`set` や TUI でスロットを選択した際にも自動でサブシェルが起動します。
+
+```toml
+# git-slot.toml
+launch_shell = true
+```
+
+```bash
+# launch_shell=true なら set でもサブシェルが起動
+gsl set main-work feature/nice-ui
+# → サブシェル内で作業開始
+
+# スクリプト用途では --no-shell で抑制
+git slot set main-work feature/nice-ui --no-shell
+```
+
 ## 設定
 
 設定は以下の優先順位でマージされます（後勝ち）:
@@ -148,13 +183,21 @@ git slot clear main-work -f
 ```toml
 # gwq_basedir = "~/worktrees"  # gwq の basedir と同じ値（デフォルト: ~/worktrees）
 
+# launch_shell = true  # サブシェルモード（デフォルト: false）
+
 [[slots]]
 name = "main-work"
 icon = "🚀"
 
+[slots.env]
+PORT = "3001"
+
 [[slots]]
 name = "hotfix"
 icon = "🔥"
+
+[slots.env]
+PORT = "3002"
 
 [[slots]]
 name = "experiment"
@@ -201,6 +244,7 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `git slot init [-g]` | 設定ファイルのテンプレートを生成します（`-g` でグローバル） |
 | `git slot hook [-g]` | フック設定の TUI を起動します（`-g` でグローバル） |
 | `git slot root` | リポジトリルートのパスを出力します（`gsl root` で cd） |
+| `git slot shell [slot]` | スロット内でサブシェルを起動します |
 | `git slot -v, --version` | バージョン情報を表示します |
 
 ### サブコマンド別フラグ
@@ -212,6 +256,7 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `-g, --global` | `init`, `hook` | グローバル設定を対象にします |
 | `-c, --create` | `set` | 新規ブランチを作成して装填します |
 | `-b, --branch` | `set` | `--create` のエイリアスです |
+| `--no-shell` | `set` | サブシェル起動を抑制します（`launch_shell` 有効時） |
 
 ## 技術スタック
 
@@ -232,6 +277,7 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 - [設定システム](docs/specs/config-system.md)
 - [CLI インターフェース](docs/specs/cli-interface.md)
 - [外部統合](docs/specs/integration.md)
+- [スロット環境変数](docs/specs/slot-env-merge.md)
 
 ## Development
 

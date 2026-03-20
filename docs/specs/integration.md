@@ -79,6 +79,7 @@ post_clear = ".git-slot/hooks/post-clear.sh"
 | `GSL_BRANCH` | ブランチ名 | `feature/nice-ui` |
 | `GSL_REPO_ROOT` | ベースリポジトリのルート | `/home/user/src/.../repo` |
 | `GSL_ACTION` | 実行中のアクション | `load` / `clear` |
+| `GSL_SHELL_SESSION` | スロットシェル内かどうか | `1`（シェル内のみ設定） |
 
 #### 実行ルール
 
@@ -113,7 +114,25 @@ sequenceDiagram
     end
 ```
 
-### 3.3 Error Handling
+### 3.3 サブシェル統合
+
+`git slot shell` または `launch_shell = true` 時の `set` / TUI は、スロットの worktree 内でサブシェルを起動する。このシェルには以下の環境変数が追加される:
+
+- `GSL_SHELL_SESSION=1` — ネスト検出用
+- `GSL_SLOT_NAME`, `GSL_SLOT_PATH`, `GSL_BRANCH`, `GSL_REPO_ROOT` — スロット情報
+- `[[slots]] env` で定義されたユーザー定義変数
+
+#### ネスト防止ルール
+
+| 状況 | 動作 |
+|------|------|
+| スロットシェル外 | すべての操作を通常どおり実行 |
+| スロットシェル内で `git slot shell` | エラー |
+| スロットシェル内で `git slot set <同じスロット>` | 許可（ブランチ切り替えのみ） |
+| スロットシェル内で `git slot set <別スロット>` | エラー |
+| スロットシェル内で `git slot`（TUI） | エラー（launch_shell=true 時） |
+
+### 3.4 Error Handling
 
 | エラー状況 | エラーコード | メッセージ例 |
 |-----------|------------|-------------|
@@ -123,7 +142,7 @@ sequenceDiagram
 | pre_* フック失敗 | E_HOOK_PRE_FAILED | "pre_{action} フックが失敗しました（exit code: {code}）。操作を中止します" |
 | post_* フック失敗 | W_HOOK_POST_FAILED | "警告: post_{action} フックが失敗しました（exit code: {code}）。操作自体は完了しています" |
 
-### 3.4 将来の検討事項
+### 3.5 将来の検討事項
 
 #### Docker 統合（保留）
 
