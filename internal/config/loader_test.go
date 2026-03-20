@@ -18,7 +18,7 @@ func writeTempConfig(t *testing.T, dir, filename, content string) string {
 }
 
 const globalTOML = `
-slots_base_path = "~/worktrees"
+wt_base_path = "~/worktrees"
 
 [[slots]]
 name = "dev"
@@ -32,7 +32,7 @@ post_mount = [{type = "run", command = "global-post.sh"}]
 `
 
 const projectTOML = `
-slots_base_path = "~/project-trees"
+wt_base_path = "~/project-trees"
 
 [[slots]]
 name = "feature"
@@ -50,7 +50,7 @@ func TestLoadConfig_BothExist(t *testing.T) {
 	cfg, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
 	require.NoError(t, err)
 
-	assert.Equal(t, "~/project-trees", cfg.SlotsBasePath)
+	assert.Equal(t, "~/project-trees", cfg.WtBasePath)
 	// Now slots are merged/appended
 	assert.ElementsMatch(t, []SlotDefinition{{Name: "dev"}, {Name: "staging"}, {Name: "feature"}}, cfg.Slots)
 	assert.Equal(t, []HookAction{{Type: "run", Command: "global-pre.sh"}}, cfg.Hooks.PreMount)
@@ -68,7 +68,7 @@ func TestLoadConfig_OnlyGlobal(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, "~/worktrees", cfg.SlotsBasePath)
+	assert.Equal(t, "~/worktrees", cfg.WtBasePath)
 	assert.ElementsMatch(t, []SlotDefinition{{Name: "dev"}, {Name: "staging"}}, cfg.Slots)
 }
 
@@ -82,7 +82,7 @@ func TestLoadConfig_OnlyProject(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, "~/project-trees", cfg.SlotsBasePath)
+	assert.Equal(t, "~/project-trees", cfg.WtBasePath)
 	assert.Equal(t, []SlotDefinition{{Name: "feature"}}, cfg.Slots)
 }
 
@@ -120,16 +120,16 @@ this is = broken`)
 	assert.Contains(t, err.Error(), "bad-global.toml")
 }
 
-func TestLoadConfig_ProjectOverridesSlotsBasePath(t *testing.T) {
+func TestLoadConfig_ProjectOverridesWtBasePath(t *testing.T) {
 	dir := t.TempDir()
 	gp := writeTempConfig(t, dir, "global.toml", `
-slots_base_path = "~/global-base"
+wt_base_path = "~/global-base"
 
 [[slots]]
 name = "s1"
 `)
 	pp := writeTempConfig(t, dir, "project.toml", `
-slots_base_path = "~/project-base"
+wt_base_path = "~/project-base"
 
 [[slots]]
 name = "s1"
@@ -137,7 +137,7 @@ name = "s1"
 
 	cfg, err := LoadConfig(LoadOptions{GlobalPath: gp, ProjectPath: pp})
 	require.NoError(t, err)
-	assert.Equal(t, "~/project-base", cfg.SlotsBasePath)
+	assert.Equal(t, "~/project-base", cfg.WtBasePath)
 }
 
 func TestLoadConfig_ProjectSlotsAppendGlobal(t *testing.T) {

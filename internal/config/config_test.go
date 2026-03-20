@@ -16,7 +16,7 @@ func TestParseTOML(t *testing.T) {
 		{
 			name: "full valid TOML with all fields",
 			input: `
-slots_base_path = "/custom/path"
+wt_base_path = "/custom/path"
 
 [[slots]]
 name = "main-work"
@@ -31,7 +31,7 @@ pre_clear = [{type = "run", command = "scripts/pre-clear.sh"}]
 post_clear = [{type = "run", command = "scripts/post-clear.sh"}]
 `,
 			expected: &Config{
-				SlotsBasePath: "/custom/path",
+				WtBasePath: "/custom/path",
 				Slots: []SlotDefinition{
 					{Name: "main-work"},
 					{Name: "hotfix"},
@@ -57,15 +57,15 @@ name = "work"
 			},
 		},
 		{
-			name: "slots_base_path set",
+			name: "wt_base_path set",
 			input: `
-slots_base_path = "/my/slots"
+wt_base_path = "/my/slots"
 
 [[slots]]
 name = "feature"
 `,
 			expected: &Config{
-				SlotsBasePath: "/my/slots",
+				WtBasePath: "/my/slots",
 				Slots: []SlotDefinition{
 					{Name: "feature"},
 				},
@@ -115,14 +115,14 @@ name = "plain"
 			name: "unknown keys silently ignored",
 			input: `
 unknown_key = "whatever"
-slots_base_path = "~/wt"
+wt_base_path = "~/wt"
 
 [[slots]]
 name = "s1"
 extra = true
 `,
 			expected: &Config{
-				SlotsBasePath: "~/wt",
+				WtBasePath: "~/wt",
 				Slots: []SlotDefinition{
 					{Name: "s1"},
 				},

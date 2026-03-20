@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	SlotsBasePath string           `toml:"slots_base_path,omitempty"`
+	WtBasePath string           `toml:"wt_base_path,omitempty"`
 	LaunchShell   bool             `toml:"launch_shell,omitempty"`
 	Slots         []SlotDefinition `toml:"slots,omitempty"`
 	Hooks         HooksConfig      `toml:"hooks,omitempty"`

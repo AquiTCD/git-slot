@@ -15,14 +15,14 @@ func TestMerge_ScalarOverride(t *testing.T) {
 		wantPath string
 	}{
 		{
-			name:     "override slots_base_path wins",
-			base:     &Config{SlotsBasePath: "/base/slots"},
-			override: &Config{SlotsBasePath: "/override/slots"},
+			name:     "override wt_base_path wins",
+			base:     &Config{WtBasePath: "/base/slots"},
+			override: &Config{WtBasePath: "/override/slots"},
 			wantPath: "/override/slots",
 		},
 		{
-			name:     "empty override preserves base slots_base_path",
-			base:     &Config{SlotsBasePath: "/base/slots"},
+			name:     "empty override preserves base wt_base_path",
+			base:     &Config{WtBasePath: "/base/slots"},
 			override: &Config{},
 			wantPath: "/base/slots",
 		},
@@ -32,7 +32,7 @@ func TestMerge_ScalarOverride(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := Merge(tt.base, tt.override)
 			if tt.wantPath != "" {
-				assert.Equal(t, tt.wantPath, got.SlotsBasePath)
+				assert.Equal(t, tt.wantPath, got.WtBasePath)
 			}
 		})
 	}
@@ -148,34 +148,34 @@ func TestMerge_SlotEnvMerging(t *testing.T) {
 func TestMerge_BothEmpty(t *testing.T) {
 	got := Merge(&Config{}, &Config{})
 
-	assert.Empty(t, got.SlotsBasePath)
+	assert.Empty(t, got.WtBasePath)
 	assert.Nil(t, got.Slots)
 }
 
 func TestMerge_NilBase(t *testing.T) {
 	override := &Config{
-		SlotsBasePath: "/from-override",
+		WtBasePath: "/from-override",
 		Slots:         slots("alpha"),
 	}
 
 	got := Merge(nil, override)
 
 	require.NotNil(t, got)
-	assert.Equal(t, "/from-override", got.SlotsBasePath)
+	assert.Equal(t, "/from-override", got.WtBasePath)
 	require.Len(t, got.Slots, 1)
 	assert.Equal(t, "alpha", got.Slots[0].Name)
 }
 
 func TestMerge_NilOverride(t *testing.T) {
 	base := &Config{
-		SlotsBasePath: "/from-base",
+		WtBasePath: "/from-base",
 		Slots:         slots("beta"),
 	}
 
 	got := Merge(base, nil)
 
 	require.NotNil(t, got)
-	assert.Equal(t, "/from-base", got.SlotsBasePath)
+	assert.Equal(t, "/from-base", got.WtBasePath)
 	require.Len(t, got.Slots, 1)
 	assert.Equal(t, "beta", got.Slots[0].Name)
 }
@@ -184,13 +184,13 @@ func TestMerge_BothNil(t *testing.T) {
 	got := Merge(nil, nil)
 
 	require.NotNil(t, got)
-	assert.Empty(t, got.SlotsBasePath)
+	assert.Empty(t, got.WtBasePath)
 	assert.Nil(t, got.Slots)
 }
 
 func TestMerge_FullIntegration(t *testing.T) {
 	base := &Config{
-		SlotsBasePath: "/home/user/slots",
+		WtBasePath: "/home/user/slots",
 		Slots:         slots("dev", "staging"),
 		Hooks: HooksConfig{
 			PreMount:  []HookAction{{Type: "run", Command: "echo pre-mount"}},
@@ -198,7 +198,7 @@ func TestMerge_FullIntegration(t *testing.T) {
 		},
 	}
 	override := &Config{
-		SlotsBasePath: "/custom/slots",
+		WtBasePath: "/custom/slots",
 		Slots:         []SlotDefinition{{Name: "dev", Icon: "🔥"}, {Name: "prod"}},
 		Hooks: HooksConfig{
 			PostMount: []HookAction{{Type: "run", Command: "custom-post-mount"}},
@@ -207,7 +207,7 @@ func TestMerge_FullIntegration(t *testing.T) {
 
 	got := Merge(base, override)
 
-	assert.Equal(t, "/custom/slots", got.SlotsBasePath)
+	assert.Equal(t, "/custom/slots", got.WtBasePath)
 	require.Len(t, got.Slots, 3)
 	assert.Equal(t, "🔥", findSlot(got.Slots, "dev").Icon)
 	assert.NotNil(t, findSlot(got.Slots, "prod"))
@@ -217,19 +217,19 @@ func TestMerge_FullIntegration(t *testing.T) {
 
 func TestMerge_DoesNotMutateInputs(t *testing.T) {
 	base := &Config{
-		SlotsBasePath: "/base",
+		WtBasePath: "/base",
 		Slots:         slots("a", "b"),
 		Hooks:         HooksConfig{PreMount: []HookAction{{Type: "run", Command: "base-hook"}}},
 	}
 	override := &Config{
-		SlotsBasePath: "/override",
+		WtBasePath: "/override",
 		Slots:         slots("x"),
 	}
 
 	got := Merge(base, override)
 
-	assert.Equal(t, "/base", base.SlotsBasePath)
-	assert.Equal(t, "/override", override.SlotsBasePath)
+	assert.Equal(t, "/base", base.WtBasePath)
+	assert.Equal(t, "/override", override.WtBasePath)
 	require.Len(t, base.Slots, 2)
 	require.Len(t, override.Slots, 1)
 
