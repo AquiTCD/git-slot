@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-03-19
+
+### Added
+
+- **Sub-shell mode**: New `git slot shell [slot]` subcommand launches a sub-shell inside a slot's worktree with GSL_* environment variables and user-defined env automatically exported.
+- **`launch_shell` config option**: When `launch_shell = true`, `set` and interactive TUI also launch sub-shells instead of printing paths.
+- **Per-slot environment variables**: Define custom key-value pairs per slot via `[slots.env]` in `git-slot.toml`. These are exported to sub-shells and hook commands.
+- **`--no-shell` flag**: Suppresses sub-shell launch on `set` when `launch_shell` is enabled (for scripting/pipe use).
+- **Nesting detection**: `GSL_SHELL_SESSION` env var prevents shell nesting. Same-slot branch switch is allowed; different-slot switch is blocked with guidance.
+- **`slotenv` package**: New internal utility for building and merging slot environment variables.
+
+### Changed
+
+- Hook `run` commands now receive per-slot user env from `[[slots]] env` alongside GSL_* vars.
+- `gsl` wrapper delegates `shell` subcommand directly (bypasses `$()` capture for `syscall.Exec` compatibility).
+- Init template (`git slot init`) now includes commented examples for `launch_shell` and `[slots.env]`.
+
 ## [0.6.0] - 2026-03-16
 
 ### Added
