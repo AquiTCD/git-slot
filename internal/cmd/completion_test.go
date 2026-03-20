@@ -114,10 +114,24 @@ func TestWrapper_NoDoubleExecution(t *testing.T) {
 			t.Fatalf("unexpected error for %s: %v", shell, err)
 		}
 
-		// The command should be executed exactly once to avoid duplicate output.
+		// 3 occurrences: 1 for shell subcommand guard, 2 for NO_COLOR branches.
 		count := strings.Count(out, "command git-slot")
-		if count != 2 {
-			t.Errorf("expected 'command git-slot' to appear exactly 2 times in %s wrapper, got %d", shell, count)
+		if count != 3 {
+			t.Errorf("expected 'command git-slot' to appear exactly 3 times in %s wrapper, got %d", shell, count)
+		}
+	}
+}
+
+func TestWrapper_ShellSubcommandBypass(t *testing.T) {
+	shells := []string{"zsh", "bash", "fish"}
+	for _, shell := range shells {
+		out, err := executeCommand("wrapper", shell)
+		if err != nil {
+			t.Fatalf("unexpected error for %s: %v", shell, err)
+		}
+
+		if !strings.Contains(out, "shell") {
+			t.Errorf("expected shell subcommand guard in %s wrapper", shell)
 		}
 	}
 }
