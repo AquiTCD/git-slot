@@ -16,6 +16,12 @@ import (
 
 const DefaultTimeout = 30 * time.Second
 
+const (
+	HookTypeLink = "link"
+	HookTypeCopy = "copy"
+	HookTypeRun  = "run"
+)
+
 var (
 	ErrHookNotFound   = errors.New("hook script not found")
 	ErrHookPermission = errors.New("hook script is not executable")
@@ -53,11 +59,11 @@ func (r *Runner) Run(actions []config.HookAction, env HookEnv) error {
 
 func (r *Runner) runAction(action config.HookAction, env HookEnv) error {
 	switch action.Type {
-	case "link":
+	case HookTypeLink:
 		return r.handleLink(action, env)
-	case "copy":
+	case HookTypeCopy:
 		return r.handleCopy(action, env)
-	case "run":
+	case HookTypeRun:
 		return r.handleRun(action, env)
 	default:
 		if action.Command != "" {
@@ -144,5 +150,8 @@ func (r *Runner) expandEnv(s string, env HookEnv) string {
 	s = strings.ReplaceAll(s, "$GSL_SLOT_PATH", env.SlotPath)
 	s = strings.ReplaceAll(s, "$GSL_BRANCH", env.Branch)
 	s = strings.ReplaceAll(s, "$GSL_REPO_ROOT", env.RepoRoot)
+	for k, v := range env.UserEnv {
+		s = strings.ReplaceAll(s, "$"+k, v)
+	}
 	return s
 }
