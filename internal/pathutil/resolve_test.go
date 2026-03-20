@@ -19,22 +19,7 @@ func homeDir(t *testing.T) string {
 	return h
 }
 
-func TestResolveSlotsBasePath_ExplicitAbsolute(t *testing.T) {
-	cfg := &config.Config{SlotsBasePath: "/tmp/my-slots"}
-	got, err := ResolveSlotsBasePath(cfg, nil)
-	require.NoError(t, err)
-	assert.Equal(t, "/tmp/my-slots", got)
-}
-
-func TestResolveSlotsBasePath_ExplicitWithTilde(t *testing.T) {
-	home := homeDir(t)
-	cfg := &config.Config{SlotsBasePath: "~/my-slots"}
-	got, err := ResolveSlotsBasePath(cfg, nil)
-	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(home, "my-slots"), got)
-}
-
-func TestResolveSlotsBasePath_GwqDefault(t *testing.T) {
+func TestResolveSlotsBasePath_DefaultGwqStyle(t *testing.T) {
 	home := homeDir(t)
 	cfg := &config.Config{}
 	remote := &git.RemoteInfo{Host: "github.com", Owner: "user", Repo: "repo"}
@@ -44,27 +29,33 @@ func TestResolveSlotsBasePath_GwqDefault(t *testing.T) {
 	assert.Equal(t, filepath.Join(home, "worktrees", "github.com", "user", "repo", "slots"), got)
 }
 
-func TestResolveSlotsBasePath_CustomSlotsBasePath(t *testing.T) {
-	cfg := &config.Config{SlotsBasePath: "/opt/worktrees"}
+func TestResolveSlotsBasePath_CustomWtBasePath_Absolute(t *testing.T) {
+	cfg := &config.Config{WtBasePath: "/opt/worktrees"}
 	remote := &git.RemoteInfo{Host: "gitlab.com", Owner: "team", Repo: "project"}
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, "/opt/worktrees", got)
+	assert.Equal(t, "/opt/worktrees/gitlab.com/team/project/slots", got)
 }
 
-func TestResolveSlotsBasePath_SlotsBasePathWithTilde(t *testing.T) {
+func TestResolveSlotsBasePath_CustomWtBasePath_Tilde(t *testing.T) {
 	home := homeDir(t)
-	cfg := &config.Config{SlotsBasePath: "~/custom-trees"}
+	cfg := &config.Config{WtBasePath: "~/custom-trees"}
 	remote := &git.RemoteInfo{Host: "github.com", Owner: "org", Repo: "app"}
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(home, "custom-trees"), got)
+	assert.Equal(t, filepath.Join(home, "custom-trees", "github.com", "org", "app", "slots"), got)
 }
 
 func TestResolveSlotsBasePath_NoRemoteInfo(t *testing.T) {
 	cfg := &config.Config{}
+	_, err := ResolveSlotsBasePath(cfg, nil)
+	require.ErrorIs(t, err, ErrNoRemoteInfo)
+}
+
+func TestResolveSlotsBasePath_NoRemoteInfo_WithWtBasePath(t *testing.T) {
+	cfg := &config.Config{WtBasePath: "/some/base"}
 	_, err := ResolveSlotsBasePath(cfg, nil)
 	require.ErrorIs(t, err, ErrNoRemoteInfo)
 }

@@ -76,23 +76,10 @@ graph LR
 
 ```go
 type Config struct {
-    SlotsBasePath string           `toml:"slots_base_path"`
-    LaunchShell   bool             `toml:"launch_shell"`
-    Slots         []SlotDefinition `toml:"slots"`
-    Hooks         HooksConfig      `toml:"hooks"`
-}
-
-type SlotDefinition struct {
-    Name string            `toml:"name"`
-    Icon string            `toml:"icon"`
-    Env  map[string]string `toml:"env"`
-}
-
-type HooksConfig struct {
-    PreLoad   string `toml:"pre_load"`
-    PostLoad  string `toml:"post_load"`
-    PreClear  string `toml:"pre_clear"`
-    PostClear string `toml:"post_clear"`
+    WtBasePath  string           `toml:"wt_base_path"`
+    LaunchShell bool             `toml:"launch_shell"`
+    Slots       []SlotDefinition `toml:"slots"`
+    Hooks       HooksConfig      `toml:"hooks"`
 }
 ```
 
@@ -103,13 +90,10 @@ type HooksConfig struct {
 ```toml
 # git-slot.toml
 
-# gwq の worktree ベースディレクトリ（gwq の worktree.basedir と同じ値を設定）
-# 省略時は ~/worktrees をデフォルトとする
-# gwq_basedir = "~/worktrees"
-
-# スロット用ベースパスの直接指定（gwq_basedir より優先）
-# 設定した場合、gwq のパス規則を無視してこのパスの下にスロットを作成する
-# slots_base_path = "/custom/path/to/slots"
+# worktree ベースディレクトリ（gwq の worktree.basedir と同じ値を設定）
+# スロットは {wt_base_path}/{host}/{owner}/{repo}/slots/{slot-name} に配置される
+# 省略時は ~/worktrees (→ ~/worktrees/{host}/{owner}/{repo}/slots/{slot-name})
+# wt_base_path = "~/worktrees"
 
 # サブシェルモード（デフォルト: false）
 # true にすると set/TUI でスロット選択後にサブシェルが起動する
@@ -193,7 +177,7 @@ LoadConfig():
 ```
 
 マージルール:
-- スカラー値（`slots_base_path` 等）: 後勝ち（上書き）
+- スカラー値（`wt_base_path` 等）: 後勝ち（上書き）
 - `launch_shell`: OR マージ（どちらかが true なら true）
 - `[[slots]]` 配列: **全体置換**。プロジェクト設定に `[[slots]]` があれば、グローバル設定のスロットは無視される
 - `[[slots]]` の `env`: スロット単位で全体置換（同名スロットの override 時）

@@ -15,19 +15,16 @@ const DefaultGwqBaseDir = "~/worktrees"
 var ErrNoRemoteInfo = errors.New("remote info is required to resolve gwq-compliant path")
 
 func ResolveSlotsBasePath(cfg *config.Config, remote *git.RemoteInfo) (string, error) {
-	if cfg.SlotsBasePath != "" {
-		expanded, err := ExpandHome(cfg.SlotsBasePath)
-		if err != nil {
-			return "", err
-		}
-		return filepath.Abs(expanded)
-	}
-
 	if remote == nil {
 		return "", ErrNoRemoteInfo
 	}
 
-	expanded, err := ExpandHome(DefaultGwqBaseDir)
+	base := cfg.WtBasePath
+	if base == "" {
+		base = DefaultGwqBaseDir
+	}
+
+	expanded, err := ExpandHome(base)
 	if err != nil {
 		return "", err
 	}
