@@ -26,6 +26,9 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 		if err := checkShellNestingForSet(slotName); err != nil {
 			return err
 		}
+		if isInsideSlotShell() && os.Getenv("GSL_SLOT_NAME") == slotName {
+			shouldLaunchShell = false
+		}
 	}
 
 	hookRunner := hook.NewRunner(out, os.Stderr)
@@ -65,9 +68,12 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 	return nil
 }
 
+func isInsideSlotShell() bool {
+	return os.Getenv("GSL_SHELL_SESSION") != ""
+}
+
 func checkShellNestingForSet(targetSlot string) error {
-	currentSession := os.Getenv("GSL_SHELL_SESSION")
-	if currentSession == "" {
+	if !isInsideSlotShell() {
 		return nil
 	}
 	currentSlot := os.Getenv("GSL_SLOT_NAME")

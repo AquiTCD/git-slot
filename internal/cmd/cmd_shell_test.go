@@ -1,0 +1,151 @@
+package cmd
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/AquiTCD/git-slot/internal/config"
+	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCheckShellNesting(t *testing.T) {
+	t.Run("no nesting when GSL_SHELL_SESSION is unset", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "")
+		err := checkShellNesting()
+		assert.NoError(t, err)
+	})
+
+	t.Run("nesting detected when GSL_SHELL_SESSION is set", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "1")
+		err := checkShellNesting()
+		assert.ErrorIs(t, err, ErrShellNested)
+	})
+}
+
+func TestCheckShellNestingForSet(t *testing.T) {
+	t.Run("no nesting when GSL_SHELL_SESSION is unset", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "")
+		err := checkShellNestingForSet("any-slot")
+		assert.NoError(t, err)
+	})
+
+	t.Run("same slot is allowed", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "1")
+		t.Setenv("GSL_SLOT_NAME", "main-work")
+		err := checkShellNestingForSet("main-work")
+		assert.NoError(t, err)
+	})
+
+	t.Run("different slot is blocked", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "1")
+		t.Setenv("GSL_SLOT_NAME", "main-work")
+		err := checkShellNestingForSet("hotfix")
+		assert.ErrorIs(t, err, ErrShellNested)
+	})
+}
+
+func TestRunMount_LaunchShell(t *testing.T) {
+	var shellLaunched bool
+	origExecShell := execShellFunc
+	execShellFunc = func(dir string, env []string) error {
+		shellLaunched = true
+		return nil
+	}
+	t.Cleanup(func() { execShellFunc = origExecShell })
+
+	t.Run("launch_shell=true launches shell after mount", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "")
+		shellLaunched = false
+
+		mgr := &mockSlotManager{
+			mountFn: func(_, _ string, _ slot.MountOptions) error { return nil },
+			getPathFn: func(name string) (string, error) {
+				return "/slots/" + name, nil
+			},
+			listFn: func() ([]slot.Slot, error) {
+				return []slot.Slot{{Name: "work", Branch: "feat/x", State: slot.SlotActive, Path: "/slots/work"}}, nil
+			},
+		}
+
+		a := &app{
+			mgr:      mgr,
+			cfg:      &config.Config{LaunchShell: true, Slots: []config.SlotDefinition{{Name: "work"}}},
+			basePath: "/slots",
+			repoRoot: "/repo",
+		}
+
+		var buf bytes.Buffer
+		err := runMount(a, "work", "feat/x", mountOptions{}, &buf)
+		require.NoError(t, err)
+		assert.True(t, shellLaunched)
+	})
+
+	t.Run("launch_shell=true with --no-shell outputs path", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "")
+		shellLaunched = false
+
+		mgr := &mockSlotManager{
+			mountFn:   func(_, _ string, _ slot.MountOptions) error { return nil },
+			getPathFn: func(name string) (string, error) { return "/slots/" + name, nil },
+		}
+
+		a := &app{
+			mgr:      mgr,
+			cfg:      &config.Config{LaunchShell: true},
+			basePath: "/slots",
+			repoRoot: "/repo",
+		}
+
+		var buf bytes.Buffer
+		err := runMount(a, "work", "feat/x", mountOptions{noShell: true}, &buf)
+		require.NoError(t, err)
+		assert.False(t, shellLaunched)
+		assert.Contains(t, buf.String(), "/slots/work")
+	})
+
+	t.Run("launch_shell=true blocks different slot in shell session", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "1")
+		t.Setenv("GSL_SLOT_NAME", "main-work")
+		shellLaunched = false
+
+		mgr := &mockSlotManager{}
+		a := &app{
+			mgr:      mgr,
+			cfg:      &config.Config{LaunchShell: true},
+			basePath: "/slots",
+			repoRoot: "/repo",
+		}
+
+		var buf bytes.Buffer
+		err := runMount(a, "hotfix", "fix/bug", mountOptions{}, &buf)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrShellNested)
+		assert.False(t, shellLaunched)
+	})
+
+	t.Run("launch_shell=true allows same slot switch in shell session", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "1")
+		t.Setenv("GSL_SLOT_NAME", "main-work")
+		shellLaunched = false
+
+		mgr := &mockSlotManager{
+			mountFn:   func(_, _ string, _ slot.MountOptions) error { return nil },
+			getPathFn: func(name string) (string, error) { return "/slots/" + name, nil },
+		}
+
+		a := &app{
+			mgr:      mgr,
+			cfg:      &config.Config{LaunchShell: true},
+			basePath: "/slots",
+			repoRoot: "/repo",
+		}
+
+		var buf bytes.Buffer
+		err := runMount(a, "main-work", "other-branch", mountOptions{}, &buf)
+		require.NoError(t, err)
+		assert.False(t, shellLaunched, "same-slot switch should not launch a new shell")
+		assert.Contains(t, buf.String(), "/slots/main-work")
+	})
+}
