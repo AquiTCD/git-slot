@@ -61,11 +61,15 @@ func TestRunMount_LaunchShell(t *testing.T) {
 
 		mgr := &mockSlotManager{
 			mountFn: func(_, _ string, _ slot.MountOptions) error { return nil },
-			getPathFn: func(name string) (string, error) {
-				return "/slots/" + name, nil
-			},
-			listFn: func() ([]slot.Slot, error) {
-				return []slot.Slot{{Name: "work", Branch: "feat/x", State: slot.SlotActive, Path: "/slots/work"}}, nil
+			statusFn: func(name string) (*slot.SlotStatus, error) {
+				return &slot.SlotStatus{
+					Slot: slot.Slot{
+						Name:   name,
+						Branch: "feat/x",
+						State:  slot.SlotActive,
+						Path:   "/slots/" + name,
+					},
+				}, nil
 			},
 		}
 
