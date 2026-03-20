@@ -81,9 +81,5 @@ func renderSlotLine(s slot.Slot, nameWidth int, hasIcons, noColor bool) string {
 		}
 	}
 
-	return "  " + lipgloss.JoinHorizontal(lipgloss.Top, joinWithSpaces(parts))
-}
-
-func joinWithSpaces(parts []string) string {
-	return strings.Join(parts, "  ")
+	return "  " + lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(parts, "  "))
 }
