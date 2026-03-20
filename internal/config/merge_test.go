@@ -155,7 +155,7 @@ func TestMerge_BothEmpty(t *testing.T) {
 func TestMerge_NilBase(t *testing.T) {
 	override := &Config{
 		WtBasePath: "/from-override",
-		Slots:         slots("alpha"),
+		Slots:      slots("alpha"),
 	}
 
 	got := Merge(nil, override)
@@ -169,7 +169,7 @@ func TestMerge_NilBase(t *testing.T) {
 func TestMerge_NilOverride(t *testing.T) {
 	base := &Config{
 		WtBasePath: "/from-base",
-		Slots:         slots("beta"),
+		Slots:      slots("beta"),
 	}
 
 	got := Merge(base, nil)
@@ -191,7 +191,7 @@ func TestMerge_BothNil(t *testing.T) {
 func TestMerge_FullIntegration(t *testing.T) {
 	base := &Config{
 		WtBasePath: "/home/user/slots",
-		Slots:         slots("dev", "staging"),
+		Slots:      slots("dev", "staging"),
 		Hooks: HooksConfig{
 			PreMount:  []HookAction{{Type: "run", Command: "echo pre-mount"}},
 			PostMount: []HookAction{{Type: "run", Command: "echo post-mount"}},
@@ -199,7 +199,7 @@ func TestMerge_FullIntegration(t *testing.T) {
 	}
 	override := &Config{
 		WtBasePath: "/custom/slots",
-		Slots:         []SlotDefinition{{Name: "dev", Icon: "🔥"}, {Name: "prod"}},
+		Slots:      []SlotDefinition{{Name: "dev", Icon: "🔥"}, {Name: "prod"}},
 		Hooks: HooksConfig{
 			PostMount: []HookAction{{Type: "run", Command: "custom-post-mount"}},
 		},
@@ -218,12 +218,12 @@ func TestMerge_FullIntegration(t *testing.T) {
 func TestMerge_DoesNotMutateInputs(t *testing.T) {
 	base := &Config{
 		WtBasePath: "/base",
-		Slots:         slots("a", "b"),
-		Hooks:         HooksConfig{PreMount: []HookAction{{Type: "run", Command: "base-hook"}}},
+		Slots:      slots("a", "b"),
+		Hooks:      HooksConfig{PreMount: []HookAction{{Type: "run", Command: "base-hook"}}},
 	}
 	override := &Config{
 		WtBasePath: "/override",
-		Slots:         slots("x"),
+		Slots:      slots("x"),
 	}
 
 	got := Merge(base, override)

@@ -9,10 +9,10 @@ import (
 )
 
 type Config struct {
-	WtBasePath string           `toml:"wt_base_path,omitempty"`
-	LaunchShell   bool             `toml:"launch_shell,omitempty"`
-	Slots         []SlotDefinition `toml:"slots,omitempty"`
-	Hooks         HooksConfig      `toml:"hooks,omitempty"`
+	WtBasePath  string           `toml:"wt_base_path,omitempty"`
+	LaunchShell bool             `toml:"launch_shell,omitempty"`
+	Slots       []SlotDefinition `toml:"slots,omitempty"`
+	Hooks       HooksConfig      `toml:"hooks,omitempty"`
 }
 
 type SlotDefinition struct {

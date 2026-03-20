@@ -12,10 +12,10 @@ func Merge(base, override *Config) *Config {
 	}
 
 	merged := &Config{
-		WtBasePath: base.WtBasePath,
-		LaunchShell:   base.LaunchShell,
-		Slots:         copySlots(base.Slots),
-		Hooks:         copyHooks(base.Hooks),
+		WtBasePath:  base.WtBasePath,
+		LaunchShell: base.LaunchShell,
+		Slots:       copySlots(base.Slots),
+		Hooks:       copyHooks(base.Hooks),
 	}
 
 	if override.WtBasePath != "" {
@@ -58,10 +58,10 @@ func Merge(base, override *Config) *Config {
 
 func copyConfig(src *Config) *Config {
 	dst := &Config{
-		WtBasePath: src.WtBasePath,
-		LaunchShell:   src.LaunchShell,
-		Slots:         copySlots(src.Slots),
-		Hooks:         copyHooks(src.Hooks),
+		WtBasePath:  src.WtBasePath,
+		LaunchShell: src.LaunchShell,
+		Slots:       copySlots(src.Slots),
+		Hooks:       copyHooks(src.Hooks),
 	}
 	return dst
 }
