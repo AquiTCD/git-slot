@@ -72,3 +72,13 @@ type ErrReservedSlotName struct {
 func (e *ErrReservedSlotName) Error() string {
 	return fmt.Sprintf("reserved slot name: %q", e.Name)
 }
+
+// FindSlot returns the SlotDefinition with the given name, or nil if not found.
+func (c *Config) FindSlot(name string) *SlotDefinition {
+	for i := range c.Slots {
+		if c.Slots[i].Name == name {
+			return &c.Slots[i]
+		}
+	}
+	return nil
+}
