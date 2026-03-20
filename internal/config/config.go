@@ -10,13 +10,15 @@ import (
 
 type Config struct {
 	SlotsBasePath string           `toml:"slots_base_path,omitempty"`
+	LaunchShell   bool             `toml:"launch_shell,omitempty"`
 	Slots         []SlotDefinition `toml:"slots,omitempty"`
 	Hooks         HooksConfig      `toml:"hooks,omitempty"`
 }
 
 type SlotDefinition struct {
-	Name string `toml:"name,omitempty"`
-	Icon string `toml:"icon,omitempty"`
+	Name string            `toml:"name,omitempty"`
+	Icon string            `toml:"icon,omitempty"`
+	Env  map[string]string `toml:"env,omitempty"`
 }
 
 type HookAction struct {

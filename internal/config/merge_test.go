@@ -103,6 +103,48 @@ func TestMerge_HooksFieldLevel(t *testing.T) {
 	})
 }
 
+func TestMerge_LaunchShellOverride(t *testing.T) {
+	t.Run("override true wins over base false", func(t *testing.T) {
+		base := &Config{LaunchShell: false}
+		override := &Config{LaunchShell: true}
+		got := Merge(base, override)
+		assert.True(t, got.LaunchShell)
+	})
+
+	t.Run("override false does not override base true", func(t *testing.T) {
+		base := &Config{LaunchShell: true}
+		override := &Config{LaunchShell: false}
+		got := Merge(base, override)
+		assert.True(t, got.LaunchShell)
+	})
+}
+
+func TestMerge_SlotEnvMerging(t *testing.T) {
+	t.Run("slot env is preserved through merge", func(t *testing.T) {
+		base := &Config{Slots: []SlotDefinition{
+			{Name: "dev", Env: map[string]string{"PORT": "3001"}},
+		}}
+		override := &Config{Slots: nil}
+		got := Merge(base, override)
+
+		require.Len(t, got.Slots, 1)
+		assert.Equal(t, map[string]string{"PORT": "3001"}, got.Slots[0].Env)
+	})
+
+	t.Run("override slot replaces env entirely", func(t *testing.T) {
+		base := &Config{Slots: []SlotDefinition{
+			{Name: "dev", Env: map[string]string{"PORT": "3001", "FOO": "bar"}},
+		}}
+		override := &Config{Slots: []SlotDefinition{
+			{Name: "dev", Env: map[string]string{"PORT": "4000"}},
+		}}
+		got := Merge(base, override)
+
+		require.Len(t, got.Slots, 1)
+		assert.Equal(t, map[string]string{"PORT": "4000"}, got.Slots[0].Env)
+	})
+}
+
 func TestMerge_BothEmpty(t *testing.T) {
 	got := Merge(&Config{}, &Config{})
 
