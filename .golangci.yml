@@ -9,6 +9,19 @@ linters:
     - govet
     - staticcheck
     - unused
+    - ineffassign
+    - errorlint
+    - nilerr
+    - revive
+    - gocritic
+    - misspell
+    - goconst
+    - nolintlint
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
 
 formatters:
   enable:

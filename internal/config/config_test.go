@@ -202,3 +202,30 @@ this is = not valid`)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrConfigParse)
 }
+
+func TestConfig_FindSlot(t *testing.T) {
+	cfg := &Config{
+		Slots: []SlotDefinition{
+			{Name: "dev", Icon: "🔧"},
+			{Name: "staging"},
+		},
+	}
+
+	t.Run("found", func(t *testing.T) {
+		got := cfg.FindSlot("dev")
+		require.NotNil(t, got)
+		assert.Equal(t, "dev", got.Name)
+		assert.Equal(t, "🔧", got.Icon)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		got := cfg.FindSlot("nope")
+		assert.Nil(t, got)
+	})
+
+	t.Run("empty config", func(t *testing.T) {
+		empty := &Config{}
+		got := empty.FindSlot("any")
+		assert.Nil(t, got)
+	})
+}

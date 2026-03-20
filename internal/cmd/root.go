@@ -75,6 +75,7 @@ type app struct {
 	cfg      *config.Config
 	basePath string
 	repoRoot string
+	wt       git.Worktree
 }
 
 func bootstrap() (*app, error) {
@@ -106,6 +107,7 @@ func bootstrap() (*app, error) {
 		cfg:      cfg,
 		basePath: basePath,
 		repoRoot: repoRoot,
+		wt:       wt,
 	}, nil
 }
 

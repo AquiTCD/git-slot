@@ -14,14 +14,14 @@ func setupRepoWithIgnored(t *testing.T) string {
 	t.Helper()
 	dir := setupTestRepo(t)
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\nsecret/\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\nsecret/\n"), 0o644))
 	run(t, dir, "git", "add", ".gitignore")
 	run(t, dir, "git", "commit", "-m", "add gitignore")
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "ignored.txt"), []byte("secret data"), 0644))
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "secret"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "secret", "key.pem"), []byte("key"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "tracked.txt"), []byte("tracked"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "ignored.txt"), []byte("secret data"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "secret"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "secret", "key.pem"), []byte("key"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "tracked.txt"), []byte("tracked"), 0o644))
 
 	return dir
 }
@@ -83,8 +83,8 @@ func TestIsIgnored_Directory(t *testing.T) {
 func TestListIgnoredFilesIn_ExpandsDirectory(t *testing.T) {
 	dir := setupRepoWithIgnored(t)
 
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "secret", "sub"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "secret", "sub", "deep.txt"), []byte("deep"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "secret", "sub"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "secret", "sub", "deep.txt"), []byte("deep"), 0o644))
 
 	wt := git.NewExecWorktree(dir)
 	files, err := wt.ListIgnoredFilesIn("secret/")
@@ -103,10 +103,10 @@ func TestListIgnoredFilesIn_ExpandsDirectory(t *testing.T) {
 func TestListIgnoredFilesIn_EmptyDir(t *testing.T) {
 	dir := setupTestRepo(t)
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("empty_dir/\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("empty_dir/\n"), 0o644))
 	run(t, dir, "git", "add", ".gitignore")
 	run(t, dir, "git", "commit", "-m", "add gitignore")
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "empty_dir"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "empty_dir"), 0o755))
 
 	wt := git.NewExecWorktree(dir)
 	files, err := wt.ListIgnoredFilesIn("empty_dir/")

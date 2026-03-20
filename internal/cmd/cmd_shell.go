@@ -6,8 +6,6 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/AquiTCD/git-slot/internal/config"
-	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/slotenv"
 	"github.com/AquiTCD/git-slot/internal/tui"
@@ -15,10 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	ErrShellNested = errors.New("already inside a slot shell session; exit first, then re-run")
-	ErrSlotEmpty   = errors.New("slot is empty; mount a branch first with 'git slot set'")
-)
+var ErrShellNested = errors.New("already inside a slot shell session; exit first, then re-run")
 
 var shellCmd = &cobra.Command{
 	Use:   "shell [slot]",
@@ -76,27 +71,15 @@ func checkShellNesting() error {
 }
 
 func launchSlotShell(a *app, slotName string) error {
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-
-	slot, err := a.mgr.GetPath(slotName)
-	if err != nil {
-		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
-	}
-	_ = slot
-
-	slots, err := a.mgr.List()
+	st, err := a.mgr.Status(slotName)
 	if err != nil {
 		return err
 	}
-	var branch string
-	for _, s := range slots {
-		if s.Name == slotName {
-			branch = s.Branch
-			break
-		}
+	if st.State == slot.SlotEmpty {
+		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
 	}
 
-	slotDef := findSlotDef(a.cfg, slotName)
+	slotDef := a.cfg.FindSlot(slotName)
 	var userEnv map[string]string
 	if slotDef != nil {
 		userEnv = slotDef.Env
@@ -104,23 +87,14 @@ func launchSlotShell(a *app, slotName string) error {
 
 	info := slotenv.SlotInfo{
 		SlotName: slotName,
-		SlotPath: slotPath,
-		Branch:   branch,
+		SlotPath: st.Path,
+		Branch:   st.Branch,
 		RepoRoot: a.repoRoot,
 	}
 	slotVars := slotenv.BuildSlotEnv(info, userEnv)
 	mergedEnv := slotenv.MergeEnvWithOS(os.Environ(), slotVars)
 
-	return execShell(slotPath, mergedEnv)
-}
-
-func findSlotDef(cfg *config.Config, name string) *config.SlotDefinition {
-	for i := range cfg.Slots {
-		if cfg.Slots[i].Name == name {
-			return &cfg.Slots[i]
-		}
-	}
-	return nil
+	return execShell(st.Path, mergedEnv)
 }
 
 var execShellFunc = execShellDefault
@@ -144,7 +118,7 @@ func selectSlotInteractive(a *app) (string, error) {
 		return "", err
 	}
 
-	activeSlots := make([]slot.Slot, 0)
+	activeSlots := make([]slot.Slot, 0, len(slots))
 	for _, s := range slots {
 		if s.State != slot.SlotEmpty {
 			activeSlots = append(activeSlots, s)
@@ -158,7 +132,7 @@ func selectSlotInteractive(a *app) (string, error) {
 		return "", fmt.Errorf("interactive mode requires a TTY")
 	}
 
-	branches := []string{}
+	var branches []string
 	noColor := tui.IsNoColor()
 	model := tui.NewInteractiveModel(activeSlots, branches, noColor)
 
@@ -168,7 +142,10 @@ func selectSlotInteractive(a *app) (string, error) {
 		return "", fmt.Errorf("interactive mode: %w", err)
 	}
 
-	m := finalModel.(tui.Model)
+	m, ok := finalModel.(tui.Model)
+	if !ok {
+		return "", fmt.Errorf("internal error: unexpected model type %T", finalModel)
+	}
 	if m.Aborted() {
 		return "", nil
 	}

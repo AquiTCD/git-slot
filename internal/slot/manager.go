@@ -105,12 +105,12 @@ func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 		return err
 	}
 
-	if slot.State == SlotActive && slot.IsDirty && !opts.Force {
-		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
-	}
-
 	if slot.State == SlotActive && slot.Branch == branchName {
 		return nil
+	}
+
+	if slot.State == SlotActive && slot.IsDirty && !opts.Force {
+		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 
 	worktrees, err := m.fetchWorktrees()
@@ -242,17 +242,8 @@ func (m *Manager) StatusAll() ([]SlotStatus, error) {
 	return statuses, nil
 }
 
-func (m *Manager) findSlotDef(name string) *config.SlotDefinition {
-	for i := range m.cfg.Slots {
-		if m.cfg.Slots[i].Name == name {
-			return &m.cfg.Slots[i]
-		}
-	}
-	return nil
-}
-
 func (m *Manager) resolveSlot(name string) (*Slot, error) {
-	def := m.findSlotDef(name)
+	def := m.cfg.FindSlot(name)
 	if def == nil {
 		return nil, &SlotError{SlotName: name, Err: ErrSlotUnknown}
 	}

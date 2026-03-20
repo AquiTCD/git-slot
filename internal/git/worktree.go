@@ -2,6 +2,7 @@ package git
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -44,6 +45,10 @@ func (w *ExecWorktree) List() ([]WorktreeInfo, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("git worktree list: %s: %w", strings.TrimSpace(string(exitErr.Stderr)), err)
+		}
 		return nil, fmt.Errorf("git worktree list: %w", err)
 	}
 

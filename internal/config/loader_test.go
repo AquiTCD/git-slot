@@ -12,7 +12,7 @@ import (
 func writeTempConfig(t *testing.T, dir, filename, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, filename)
-	err := os.WriteFile(path, []byte(content), 0644)
+	err := os.WriteFile(path, []byte(content), 0o644)
 	require.NoError(t, err)
 	return path
 }
@@ -197,7 +197,7 @@ func TestLoadConfig_EmptyFileFailsValidation(t *testing.T) {
 func TestLoadConfig_RepoRootDeriveProjectPath(t *testing.T) {
 	dir := t.TempDir()
 	repoRoot := filepath.Join(dir, "repo")
-	require.NoError(t, os.MkdirAll(repoRoot, 0755))
+	require.NoError(t, os.MkdirAll(repoRoot, 0o755))
 
 	writeTempConfig(t, repoRoot, "git-slot.toml", `
 [[slots]]

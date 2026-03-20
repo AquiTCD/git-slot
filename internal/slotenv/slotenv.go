@@ -1,3 +1,4 @@
+// Package slotenv builds and merges GSL_* environment variable sets for slot shells.
 package slotenv
 
 import "strings"

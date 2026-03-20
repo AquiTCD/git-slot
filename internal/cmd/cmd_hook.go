@@ -271,11 +271,11 @@ func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global b
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(configPath, []byte(finalContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(finalContent), 0o644); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 

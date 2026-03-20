@@ -2,6 +2,7 @@ package git
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -73,7 +74,8 @@ func (w *ExecWorktree) IsIgnored(path string) (bool, error) {
 		return true, nil // exit code 0 means ignored
 	}
 
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		if exitErr.ExitCode() == 1 {
 			return false, nil // exit code 1 means NOT ignored
 		}

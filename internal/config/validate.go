@@ -7,6 +7,8 @@ import (
 
 var validSlotName = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
+// reservedNames holds slot names that are disallowed.
+// Currently empty; add entries here as needed (e.g., "main": true).
 var reservedNames = map[string]bool{}
 
 func Validate(cfg *Config) error {
