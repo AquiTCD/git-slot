@@ -11,9 +11,10 @@ var ErrConfigExists = errors.New("configuration file already exists")
 const configTemplate = `# git-slot.toml — Git Slot configuration
 # See: https://github.com/AquiTCD/git-slot
 
-# Base directory for slots.
-# Default: ~/worktrees
-# slots_base_path = "~/worktrees"
+# Base directory for worktrees (gwq-compatible).
+# Slots are placed at {wt_base_path}/{host}/{owner}/{repo}/slots/{slot-name}.
+# Default: ~/worktrees (i.e. ~/worktrees/{host}/{owner}/{repo}/slots/{slot-name})
+# wt_base_path = "~/worktrees"
 
 # Launch a sub-shell after mounting a slot (default: false).
 # When true, 'set' and interactive TUI will open a sub-shell

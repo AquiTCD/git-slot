@@ -203,18 +203,15 @@ gwq はデフォルトで `~/worktrees/{host}/{owner}/{repo}/{branch}` に workt
 
 ```
 ResolveSlotsBasePath(config):
-  1. IF config.slots_base_path が設定済み:
-       return absolutePath(config.slots_base_path)
-
-  2. // gwq 準拠のデフォルトパスを算出
+  1. // gwq 準拠のパスを算出（常に {host}/{owner}/{repo}/slots が付与される）
      repoURL = git remote get-url origin
      repoInfo = ParseRepositoryURL(repoURL)
      // → host=github.com, owner=user, repo=myapp
 
-  3. gwqBaseDir = config.gwq_basedir OR "~/worktrees"
-  4. basePath = gwqBaseDir/{host}/{owner}/{repo}/slots
+  2. base = config.wt_base_path OR "~/worktrees"
+  3. basePath = base/{host}/{owner}/{repo}/slots
      // → ~/worktrees/github.com/user/myapp/slots
-  5. return absolutePath(basePath)
+  4. return absolutePath(basePath)
 
 ResolveSlotPath(slotName):
   1. basePath = ResolveSlotsBasePath()
