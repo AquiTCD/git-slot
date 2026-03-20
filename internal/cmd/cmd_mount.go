@@ -34,12 +34,19 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 	hookRunner := hook.NewRunner(out, os.Stderr)
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
 
+	slotDef := findSlotDef(a.cfg, slotName)
+	var userEnv map[string]string
+	if slotDef != nil {
+		userEnv = slotDef.Env
+	}
+
 	env := hook.HookEnv{
 		SlotName: slotName,
 		SlotPath: slotPath,
 		Branch:   branchName,
 		RepoRoot: a.repoRoot,
 		Action:   "mount",
+		UserEnv:  userEnv,
 	}
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreMount, env); err != nil {
