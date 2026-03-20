@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-03-20
+
+### Changed
+
+- Comprehensive refactoring across internal packages: extracted `buildHookEnv` helper, defined `HookType` constants, promoted `FindSlot` to a `Config` method, removed dead code in `ResolveSlotsBasePath` and `cmd_shell`.
+- Applied Go best practices and linting rules across the codebase (style, lint, additional linters enabled).
+- Added GitHub Actions CI test workflow with proper git identity configuration for reproducible test runs.
+- Restructured `.agents` directory for Claude Code compatibility.
+
+### Fixed
+
+- Worktree list errors now include stderr context for easier debugging.
+- Corrected guard order for dirty/same-branch check in `Mount()` to ensure correct behavior when switching branches.
+
 ## [0.7.0] - 2026-03-19
 
 ### Added
@@ -186,6 +200,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.7.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.1
+[0.7.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.0
 [0.6.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.6.0
 [0.5.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.1
 [0.5.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.5.0
