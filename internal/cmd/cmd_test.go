@@ -239,7 +239,7 @@ func TestRunMount_Success(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runMount(a, "work", "feature/x", false, false, &buf)
+	err := runMount(a, "work", "feature/x", mountOptions{}, &buf)
 	require.NoError(t, err)
 	assert.True(t, mountCalled)
 	assert.Contains(t, buf.String(), "/slots/work")
@@ -264,7 +264,7 @@ func TestRunMount_CreateBranch(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runMount(a, "work", "new-branch", true, false, &buf)
+	err := runMount(a, "work", "new-branch", mountOptions{createBranch: true}, &buf)
 	require.NoError(t, err)
 }
 
@@ -287,7 +287,7 @@ func TestRunMount_Force(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runMount(a, "work", "main", false, true, &buf)
+	err := runMount(a, "work", "main", mountOptions{force: true}, &buf)
 	require.NoError(t, err)
 }
 
@@ -306,7 +306,7 @@ func TestRunMount_Error(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runMount(a, "work", "main", false, false, &buf)
+	err := runMount(a, "work", "main", mountOptions{}, &buf)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mount failed")
 }

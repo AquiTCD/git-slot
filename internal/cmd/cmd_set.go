@@ -22,6 +22,7 @@ func init() {
 	setCmd.Flags().StringP("create", "c", "", "Create a new branch and mount into slot")
 	setCmd.Flags().StringP("branch", "b", "", "Alias for --create")
 	setCmd.Flags().BoolP("force", "f", false, "Skip confirmation for destructive actions")
+	setCmd.Flags().Bool("no-shell", false, "Suppress sub-shell launch even when launch_shell is enabled")
 
 	rootCmd.AddCommand(setCmd)
 }
@@ -30,6 +31,7 @@ func runSet(cmd *cobra.Command, args []string) error {
 	create, _ := cmd.Flags().GetString("create")
 	branch, _ := cmd.Flags().GetString("branch")
 	force, _ := cmd.Flags().GetBool("force")
+	noShell, _ := cmd.Flags().GetBool("no-shell")
 
 	if branch != "" {
 		if create != "" && create != branch {
@@ -47,10 +49,10 @@ func runSet(cmd *cobra.Command, args []string) error {
 	out := cmd.OutOrStdout()
 
 	if len(args) == 2 {
-		return runMount(a, slotName, args[1], false, force, out)
+		return runMount(a, slotName, args[1], mountOptions{force: force, noShell: noShell}, out)
 	}
 	if create != "" {
-		return runMount(a, slotName, create, true, force, out)
+		return runMount(a, slotName, create, mountOptions{createBranch: true, force: force, noShell: noShell}, out)
 	}
 	return runGetPath(a.mgr, slotName, out)
 }
