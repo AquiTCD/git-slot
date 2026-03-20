@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.2] - 2026-03-20
+
+### Changed
+
+- Renamed config field `slots_base_path` to `wt_base_path` (TOML key change). The field now exclusively uses gwq-compatible semantics: slots are always placed at `{wt_base_path}/{host}/{owner}/{repo}/slots/{slot-name}`. The previous "direct path" behavior (bypassing the host/owner/repo hierarchy) has been removed as it was broken for global config (caused cross-repo slot collisions). Default behavior is unchanged: `~/worktrees/{host}/{owner}/{repo}/slots/{slot-name}`.
+
 ## [0.7.1] - 2026-03-20
 
 ### Changed
@@ -200,6 +206,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.7.2]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.2
 [0.7.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.1
 [0.7.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.0
 [0.6.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.6.0
