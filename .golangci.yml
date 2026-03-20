@@ -17,6 +17,11 @@ linters:
     - misspell
     - goconst
     - nolintlint
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
 
 formatters:
   enable:

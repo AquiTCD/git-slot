@@ -100,6 +100,9 @@ func parseSchemeURL(rawURL string) (*RemoteInfo, error) {
 func parseSSHURL(rawURL string) (*RemoteInfo, error) {
 	// git@host:owner/repo.git
 	colonIdx := strings.Index(rawURL, ":")
+	if colonIdx < 0 {
+		return nil, ErrInvalidRemoteURL
+	}
 	host := rawURL[:colonIdx]
 	if atIdx := strings.Index(host, "@"); atIdx >= 0 {
 		host = host[atIdx+1:]

@@ -82,7 +82,7 @@ func TestList_MixedState(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -107,7 +107,7 @@ func TestList_WithDirtySlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main", HeadHash: "def5678"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return true, nil },
+		isDirtyFn: func(_ string) (bool, error) { return true, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -163,7 +163,7 @@ func TestGetPath_ActiveSlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -210,7 +210,7 @@ func TestMount_ExistingBranch_EmptySlot(t *testing.T) {
 	var addPath, addBranch string
 	mock := &mockWorktree{
 		listFn:         func() ([]git.WorktreeInfo, error) { return nil, nil },
-		branchExistsFn: func(branch string) (bool, error) { return true, nil },
+		branchExistsFn: func(_ string) (bool, error) { return true, nil },
 		addFn: func(path, branch string) error {
 			addPath = path
 			addBranch = branch
@@ -238,8 +238,8 @@ func TestMount_ExistingBranch_ActiveSlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "old-branch"},
 			}, nil
 		},
-		isDirtyFn:      func(path string) (bool, error) { return false, nil },
-		branchExistsFn: func(branch string) (bool, error) { return true, nil },
+		isDirtyFn:      func(_ string) (bool, error) { return false, nil },
+		branchExistsFn: func(_ string) (bool, error) { return true, nil },
 		switchFn: func(path, branch string, discard bool) error {
 			switchCalled = true
 			switchBranch = branch
@@ -266,7 +266,7 @@ func TestMount_SameBranch_Noop(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "feature/x"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
 		switchFn: func(path, branch string, discard bool) error {
 			anyCalled = true
 			return nil
@@ -295,7 +295,7 @@ func TestMount_DirtySameBranch_ReturnsNil(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "feature/x"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return true, nil },
+		isDirtyFn: func(_ string) (bool, error) { return true, nil },
 		switchFn: func(path, branch string, discard bool) error {
 			anyCalled = true
 			return nil
@@ -325,8 +325,8 @@ func TestMount_CreateBranch_ActiveSlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "old-branch"},
 			}, nil
 		},
-		isDirtyFn:      func(path string) (bool, error) { return false, nil },
-		branchExistsFn: func(branch string) (bool, error) { return false, nil },
+		isDirtyFn:      func(_ string) (bool, error) { return false, nil },
+		branchExistsFn: func(_ string) (bool, error) { return false, nil },
 		switchCreateFn: func(path, newBranch string) error {
 			switchCreateCalled = true
 			switchCreateBranch = newBranch
@@ -352,7 +352,7 @@ func TestMount_ExistingBranch_DirtySlot_NoForce(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "old-branch"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return true, nil },
+		isDirtyFn: func(_ string) (bool, error) { return true, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -373,8 +373,8 @@ func TestMount_ExistingBranch_DirtySlot_Force(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "old-branch"},
 			}, nil
 		},
-		isDirtyFn:      func(path string) (bool, error) { return true, nil },
-		branchExistsFn: func(branch string) (bool, error) { return true, nil },
+		isDirtyFn:      func(_ string) (bool, error) { return true, nil },
+		branchExistsFn: func(_ string) (bool, error) { return true, nil },
 		switchFn: func(path, branch string, discard bool) error {
 			switchDiscard = discard
 			return nil
@@ -395,7 +395,7 @@ func TestMount_CreateBranch_EmptySlot(t *testing.T) {
 	var newBranchPath, newBranchName string
 	mock := &mockWorktree{
 		listFn:         func() ([]git.WorktreeInfo, error) { return nil, nil },
-		branchExistsFn: func(branch string) (bool, error) { return false, nil },
+		branchExistsFn: func(_ string) (bool, error) { return false, nil },
 		addNewBranchFn: func(path, newBranch string) error {
 			newBranchPath = path
 			newBranchName = newBranch
@@ -417,7 +417,7 @@ func TestMount_CreateBranch_AlreadyExists(t *testing.T) {
 	}
 	mock := &mockWorktree{
 		listFn:         func() ([]git.WorktreeInfo, error) { return nil, nil },
-		branchExistsFn: func(branch string) (bool, error) { return true, nil },
+		branchExistsFn: func(_ string) (bool, error) { return true, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -437,7 +437,7 @@ func TestMount_BranchInUse_OtherSlot(t *testing.T) {
 				{Path: "/base/slots/hotfix", Branch: "feature/x"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -460,7 +460,7 @@ func TestMount_BranchInUse_GwqWorktree(t *testing.T) {
 				{Path: "/other/worktree/path", Branch: "feature/x"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -479,7 +479,7 @@ func TestMount_BranchNotFound(t *testing.T) {
 	}
 	mock := &mockWorktree{
 		listFn:         func() ([]git.WorktreeInfo, error) { return nil, nil },
-		branchExistsFn: func(branch string) (bool, error) { return false, nil },
+		branchExistsFn: func(_ string) (bool, error) { return false, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -508,7 +508,7 @@ func TestMount_WorktreeAddFails(t *testing.T) {
 	}
 	mock := &mockWorktree{
 		listFn:         func() ([]git.WorktreeInfo, error) { return nil, nil },
-		branchExistsFn: func(branch string) (bool, error) { return true, nil },
+		branchExistsFn: func(_ string) (bool, error) { return true, nil },
 		addFn: func(path, branch string) error {
 			return errors.New("worktree add failed")
 		},
@@ -535,8 +535,8 @@ func TestClear_ActiveSlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
-		removeFn: func(path string, force bool) error {
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
+		removeFn: func(path string, _ bool) error {
 			removeCalled = true
 			removePath = path
 			return nil
@@ -576,7 +576,7 @@ func TestClear_DirtySlot_NoForce(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return true, nil },
+		isDirtyFn: func(_ string) (bool, error) { return true, nil },
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -597,7 +597,7 @@ func TestClear_DirtySlot_Force(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return true, nil },
+		isDirtyFn: func(_ string) (bool, error) { return true, nil },
 		removeFn: func(path string, force bool) error {
 			removeForce = force
 			return nil
@@ -634,7 +634,7 @@ func TestClear_RemoveFails(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main"},
 			}, nil
 		},
-		isDirtyFn: func(path string) (bool, error) { return false, nil },
+		isDirtyFn: func(_ string) (bool, error) { return false, nil },
 		removeFn: func(path string, force bool) error {
 			return errors.New("remove failed")
 		},
@@ -659,7 +659,7 @@ func TestStatus_ActiveSlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
-		isDirtyFn:       func(path string) (bool, error) { return true, nil },
+		isDirtyFn:       func(_ string) (bool, error) { return true, nil },
 		commitSubjectFn: func(path string) (string, error) { return "add feature X", nil },
 		statusShortFn: func(path string) ([]string, error) {
 			return []string{" M file.go", "?? new.txt"}, nil
@@ -717,7 +717,7 @@ func TestStatusAll(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
-		isDirtyFn:       func(path string) (bool, error) { return false, nil },
+		isDirtyFn:       func(_ string) (bool, error) { return false, nil },
 		commitSubjectFn: func(path string) (string, error) { return "initial commit", nil },
 		statusShortFn:   func(path string) ([]string, error) { return nil, nil },
 	}

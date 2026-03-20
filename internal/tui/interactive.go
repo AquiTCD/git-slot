@@ -35,7 +35,6 @@ type Model struct {
 	filterQuery   string
 	result        Result
 	noColor       bool
-	err           error
 }
 
 func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Model {
@@ -72,13 +71,12 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch m.step {
 		case stepSlotSelect:
-			return m.updateSlotSelect(msg)
+			return m.updateSlotSelect(keyMsg)
 		case stepBranchInput:
-			return m.updateBranchInput(msg)
+			return m.updateBranchInput(keyMsg)
 		}
 	}
 	return m, nil
@@ -282,7 +280,7 @@ func (m Model) viewBranchInput() string {
 		name = selected.Icon + " " + name
 	}
 
-	b.WriteString(fmt.Sprintf("Slot: %s\n\n", name))
+	fmt.Fprintf(&b, "Slot: %s\n\n", name)
 	b.WriteString("Enter branch name (prefix with + to create new):\n\n")
 	b.WriteString(m.input.View())
 	b.WriteString("\n\ntab: complete  enter: confirm  esc: back")

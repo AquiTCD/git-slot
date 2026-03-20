@@ -1,3 +1,4 @@
+// Package errutil provides error types with exit-code support.
 package errutil
 
 // ExitError is an interface for errors that should cause the program to exit
