@@ -75,6 +75,7 @@ git slot --status [slot]          # スロットの詳細状態を表示
 git slot --init [--global]        # 設定ファイルのテンプレートを生成
 git slot --version                # バージョン情報を表示
 git slot --help                   # ヘルプを表示
+git slot shell [slot]             # スロット内でサブシェルを起動
 ```
 
 #### フラグ一覧
@@ -92,6 +93,7 @@ git slot --help                   # ヘルプを表示
 | | `--json` | なし | JSON 形式で出力 |
 | | `--version` | なし | バージョン情報を表示 |
 | `-h` | `--help` | なし | ヘルプを表示 |
+| | `--no-shell` | なし | `launch_shell` 有効時でもサブシェルを起動しない |
 
 #### 呼び出し方法
 
@@ -255,6 +257,32 @@ $ git slot --version
 git-slot version 0.1.0 (commit: abc1234, built: 2026-03-13)
 ```
 
+##### `git slot shell [slot]` — サブシェル起動
+
+スロットの worktree ディレクトリ内でサブシェルを起動する。GSL_* 環境変数とスロット設定の env がエクスポートされる。
+
+```
+$ git slot shell main-work
+# main-work スロットの worktree 内で新しいシェルセッションが開始
+# GSL_SLOT_NAME=main-work, GSL_SLOT_PATH=..., GSL_BRANCH=..., GSL_SHELL_SESSION=1
+
+$ exit  # スロットシェルを終了
+```
+
+スロットが Empty の場合はエラー:
+
+```
+$ git slot shell experiment
+Error: slot 'experiment' is empty; mount a branch first with 'git slot set'
+```
+
+スロットシェル内での再実行はエラー:
+
+```
+$ git slot shell hotfix  # main-work のスロットシェル内で実行
+Error: already inside a slot shell session; exit first, then re-run
+```
+
 #### 3.3.2 引数解析の優先順位
 
 位置引数とフラグが混在するため、以下の優先順位で解析する:
@@ -313,3 +341,5 @@ git-slot version 0.1.0 (commit: abc1234, built: 2026-03-13)
 | `--json` フラグ | Phase 2 | P2 |
 | Non-TTY フォールバック | Phase 2 | P1 |
 | `git slot completion` | Phase 3 | P2 |
+| `git slot shell` | Phase 4 | P1 |
+| `--no-shell` フラグ | Phase 4 | P1 |

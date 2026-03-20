@@ -13,12 +13,17 @@ func Merge(base, override *Config) *Config {
 
 	merged := &Config{
 		SlotsBasePath: base.SlotsBasePath,
+		LaunchShell:   base.LaunchShell,
 		Slots:         copySlots(base.Slots),
 		Hooks:         copyHooks(base.Hooks),
 	}
 
 	if override.SlotsBasePath != "" {
 		merged.SlotsBasePath = override.SlotsBasePath
+	}
+
+	if override.LaunchShell {
+		merged.LaunchShell = true
 	}
 
 	for _, overrideSlot := range override.Slots {
@@ -54,6 +59,7 @@ func Merge(base, override *Config) *Config {
 func copyConfig(src *Config) *Config {
 	dst := &Config{
 		SlotsBasePath: src.SlotsBasePath,
+		LaunchShell:   src.LaunchShell,
 		Slots:         copySlots(src.Slots),
 		Hooks:         copyHooks(src.Hooks),
 	}
@@ -83,6 +89,23 @@ func copySlots(src []SlotDefinition) []SlotDefinition {
 		return nil
 	}
 	dst := make([]SlotDefinition, len(src))
-	copy(dst, src)
+	for i, s := range src {
+		dst[i] = SlotDefinition{
+			Name: s.Name,
+			Icon: s.Icon,
+			Env:  copyEnvMap(s.Env),
+		}
+	}
+	return dst
+}
+
+func copyEnvMap(src map[string]string) map[string]string {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
 	return dst
 }

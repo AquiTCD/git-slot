@@ -65,7 +65,7 @@ func run(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		return runInteractive(a, false, cmd.OutOrStdout())
+		return runInteractive(a, false, false, cmd.OutOrStdout())
 	}
 	return cmd.Help()
 }

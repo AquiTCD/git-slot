@@ -133,6 +133,56 @@ extra = true
 			input:    "",
 			expected: &Config{},
 		},
+		{
+			name: "slots with env field",
+			input: `
+[[slots]]
+name = "main-work"
+
+[slots.env]
+PORT = "3001"
+APP_ENV = "slot-dev"
+
+[[slots]]
+name = "hotfix"
+
+[slots.env]
+PORT = "3002"
+`,
+			expected: &Config{
+				Slots: []SlotDefinition{
+					{Name: "main-work", Env: map[string]string{"PORT": "3001", "APP_ENV": "slot-dev"}},
+					{Name: "hotfix", Env: map[string]string{"PORT": "3002"}},
+				},
+			},
+		},
+		{
+			name: "launch_shell setting",
+			input: `
+launch_shell = true
+
+[[slots]]
+name = "dev"
+`,
+			expected: &Config{
+				LaunchShell: true,
+				Slots: []SlotDefinition{
+					{Name: "dev"},
+				},
+			},
+		},
+		{
+			name: "slots without env field",
+			input: `
+[[slots]]
+name = "plain"
+`,
+			expected: &Config{
+				Slots: []SlotDefinition{
+					{Name: "plain"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

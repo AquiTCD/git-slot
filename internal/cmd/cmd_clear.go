@@ -36,11 +36,18 @@ func runClear(a *app, slotName string, force bool, out io.Writer) error {
 	hookRunner := hook.NewRunner(out, os.Stderr)
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
 
+	slotDef := findSlotDef(a.cfg, slotName)
+	var userEnv map[string]string
+	if slotDef != nil {
+		userEnv = slotDef.Env
+	}
+
 	env := hook.HookEnv{
 		SlotName: slotName,
 		SlotPath: slotPath,
 		RepoRoot: a.repoRoot,
 		Action:   "clear",
+		UserEnv:  userEnv,
 	}
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreClear, env); err != nil {

@@ -85,6 +85,11 @@ Fish (~/.config/fish/config.fish):
 
 func writeShWrapper(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `gsl() {
+  # 'shell' subcommand uses syscall.Exec and must not run inside $();
+  # delegate directly so the current process is replaced.
+  case "$1" in
+    shell) command git-slot "$@"; return $? ;;
+  esac
   local result
   # Force color output even when captured in a variable,
   # but only if NO_COLOR is not set.
@@ -95,6 +100,8 @@ func writeShWrapper(w io.Writer) error {
   fi
   local rc=$?
   if [ $rc -eq 0 ]; then
+    # When launch_shell is enabled, git-slot launches a sub-shell
+    # instead of printing a path, so result will be empty — no cd.
     if [ -n "$result" ] && [ -d "$result" ]; then
       cd "$result" || return 1
     elif [ -n "$result" ]; then
@@ -109,6 +116,12 @@ func writeShWrapper(w io.Writer) error {
 
 func writeFishWrapper(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `function gsl
+  # 'shell' subcommand uses syscall.Exec and must not run inside ();
+  # delegate directly so the current process is replaced.
+  if test (count $argv) -ge 1; and test "$argv[1]" = "shell"
+    command git-slot $argv
+    return $status
+  end
   set -l result
   if not set -q NO_COLOR
     set result (env CLICOLOR_FORCE=1 command git-slot $argv </dev/tty)
@@ -117,6 +130,8 @@ func writeFishWrapper(w io.Writer) error {
   end
   set -l rc $status
   if test $rc -eq 0
+    # When launch_shell is enabled, git-slot launches a sub-shell
+    # instead of printing a path, so result will be empty — no cd.
     if test -n "$result"; and test -d "$result[1]"
       cd "$result[1]"
     else if test -n "$result"

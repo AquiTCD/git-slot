@@ -13,9 +13,32 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func runMount(a *app, slotName, branchName string, createBranch, force bool, out io.Writer) error {
+type mountOptions struct {
+	createBranch bool
+	force        bool
+	noShell      bool
+}
+
+func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Writer) error {
+	shouldLaunchShell := a.cfg.LaunchShell && !opts.noShell
+
+	if shouldLaunchShell {
+		if err := checkShellNestingForSet(slotName); err != nil {
+			return err
+		}
+		if isInsideSlotShell() && os.Getenv("GSL_SLOT_NAME") == slotName {
+			shouldLaunchShell = false
+		}
+	}
+
 	hookRunner := hook.NewRunner(out, os.Stderr)
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
+
+	slotDef := findSlotDef(a.cfg, slotName)
+	var userEnv map[string]string
+	if slotDef != nil {
+		userEnv = slotDef.Env
+	}
 
 	env := hook.HookEnv{
 		SlotName: slotName,
@@ -23,6 +46,7 @@ func runMount(a *app, slotName, branchName string, createBranch, force bool, out
 		Branch:   branchName,
 		RepoRoot: a.repoRoot,
 		Action:   "mount",
+		UserEnv:  userEnv,
 	}
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreMount, env); err != nil {
@@ -30,8 +54,8 @@ func runMount(a *app, slotName, branchName string, createBranch, force bool, out
 	}
 
 	if err := a.mgr.Mount(slotName, branchName, slot.MountOptions{
-		CreateBranch: createBranch,
-		Force:        force,
+		CreateBranch: opts.createBranch,
+		Force:        opts.force,
 	}); err != nil {
 		return err
 	}
@@ -40,10 +64,30 @@ func runMount(a *app, slotName, branchName string, createBranch, force bool, out
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: post-mount hook: %v\n", err)
 	}
 
-	path, _ := a.mgr.GetPath(slotName)
 	_, _ = fmt.Fprintf(os.Stderr, "Slot '%s' is ready.\n", slotName)
+
+	if shouldLaunchShell {
+		return launchSlotShell(a, slotName)
+	}
+
+	path, _ := a.mgr.GetPath(slotName)
 	_, _ = fmt.Fprintln(out, path)
 	return nil
+}
+
+func isInsideSlotShell() bool {
+	return os.Getenv("GSL_SHELL_SESSION") != ""
+}
+
+func checkShellNestingForSet(targetSlot string) error {
+	if !isInsideSlotShell() {
+		return nil
+	}
+	currentSlot := os.Getenv("GSL_SLOT_NAME")
+	if currentSlot == targetSlot {
+		return nil
+	}
+	return ErrShellNested
 }
 
 func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
@@ -55,7 +99,13 @@ func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 	return nil
 }
 
-func runInteractive(a *app, force bool, out io.Writer) error {
+func runInteractive(a *app, force, noShell bool, out io.Writer) error {
+	if a.cfg.LaunchShell && !noShell {
+		if err := checkShellNesting(); err != nil {
+			return err
+		}
+	}
+
 	slots, err := a.mgr.List()
 	if err != nil {
 		return err
@@ -91,5 +141,9 @@ func runInteractive(a *app, force bool, out io.Writer) error {
 		return runGetPath(a.mgr, result.SlotName, out)
 	}
 
-	return runMount(a, result.SlotName, result.BranchName, result.CreateBranch, force, out)
+	return runMount(a, result.SlotName, result.BranchName, mountOptions{
+		createBranch: result.CreateBranch,
+		force:        force,
+		noShell:      noShell,
+	}, out)
 }

@@ -15,16 +15,25 @@ const configTemplate = `# git-slot.toml — Git Slot configuration
 # Default: ~/worktrees
 # slots_base_path = "~/worktrees"
 
+# Launch a sub-shell after mounting a slot (default: false).
+# When true, 'set' and interactive TUI will open a sub-shell
+# with GSL_* environment variables inside the slot directory.
+# launch_shell = true
+
 # Define your slots below.
 # Add as many [[slots]] entries as you need.
 
 [[slots]]
 name = "slot-1"
 # icon = "🔧"
+# [slots.env]
+# PORT = "3001"
 
 [[slots]]
 name = "slot-2"
 # icon = "🔥"
+# [slots.env]
+# PORT = "3002"
 
 # Optional: hooks
 # [hooks]

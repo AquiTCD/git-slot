@@ -29,6 +29,7 @@ type HookEnv struct {
 	Branch   string
 	RepoRoot string
 	Action   string // "mount" or "clear"
+	UserEnv  map[string]string
 }
 
 type Runner struct {
@@ -112,13 +113,17 @@ func (r *Runner) handleRun(action config.HookAction, env HookEnv) error {
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Stdout = r.stdout
 	cmd.Stderr = r.stderr
-	cmd.Env = append(os.Environ(),
-		"GSL_SLOT_NAME="+env.SlotName,
-		"GSL_SLOT_PATH="+env.SlotPath,
-		"GSL_BRANCH="+env.Branch,
-		"GSL_REPO_ROOT="+env.RepoRoot,
-		"GSL_ACTION="+env.Action,
-	)
+	hookEnvVars := []string{
+		"GSL_SLOT_NAME=" + env.SlotName,
+		"GSL_SLOT_PATH=" + env.SlotPath,
+		"GSL_BRANCH=" + env.Branch,
+		"GSL_REPO_ROOT=" + env.RepoRoot,
+		"GSL_ACTION=" + env.Action,
+	}
+	for k, v := range env.UserEnv {
+		hookEnvVars = append(hookEnvVars, k+"="+v)
+	}
+	cmd.Env = append(os.Environ(), hookEnvVars...)
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
