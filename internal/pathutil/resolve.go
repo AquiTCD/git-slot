@@ -27,12 +27,7 @@ func ResolveSlotsBasePath(cfg *config.Config, remote *git.RemoteInfo) (string, e
 		return "", ErrNoRemoteInfo
 	}
 
-	base := cfg.SlotsBasePath
-	if base == "" {
-		base = DefaultGwqBaseDir
-	}
-
-	expanded, err := ExpandHome(base)
+	expanded, err := ExpandHome(DefaultGwqBaseDir)
 	if err != nil {
 		return "", err
 	}

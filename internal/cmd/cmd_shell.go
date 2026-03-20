@@ -15,10 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	ErrShellNested = errors.New("already inside a slot shell session; exit first, then re-run")
-	ErrSlotEmpty   = errors.New("slot is empty; mount a branch first with 'git slot set'")
-)
+var ErrShellNested = errors.New("already inside a slot shell session; exit first, then re-run")
 
 var shellCmd = &cobra.Command{
 	Use:   "shell [slot]",
@@ -78,11 +75,9 @@ func checkShellNesting() error {
 func launchSlotShell(a *app, slotName string) error {
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
 
-	slot, err := a.mgr.GetPath(slotName)
-	if err != nil {
+	if _, err := a.mgr.GetPath(slotName); err != nil {
 		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
 	}
-	_ = slot
 
 	slots, err := a.mgr.List()
 	if err != nil {
