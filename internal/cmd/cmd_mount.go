@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/AquiTCD/git-slot/internal/git"
 	"github.com/AquiTCD/git-slot/internal/hook"
 	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
@@ -33,21 +32,7 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 
 	hookRunner := hook.NewRunner(out, os.Stderr)
 	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-
-	slotDef := findSlotDef(a.cfg, slotName)
-	var userEnv map[string]string
-	if slotDef != nil {
-		userEnv = slotDef.Env
-	}
-
-	env := hook.HookEnv{
-		SlotName: slotName,
-		SlotPath: slotPath,
-		Branch:   branchName,
-		RepoRoot: a.repoRoot,
-		Action:   "mount",
-		UserEnv:  userEnv,
-	}
+	env := buildHookEnv(a.cfg, slotName, slotPath, branchName, a.repoRoot, "mount")
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreMount, env); err != nil {
 		return fmt.Errorf("pre-mount hook: %w", err)
@@ -115,8 +100,10 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 		return nil
 	}
 
-	wt := git.NewExecWorktree(a.repoRoot)
-	branches, _ := wt.ListBranches()
+	branches, err := a.wt.ListBranches()
+	if err != nil {
+		branches = nil
+	}
 
 	noColor := tui.IsNoColor()
 	model := tui.NewInteractiveModel(slots, branches, noColor)
@@ -127,7 +114,10 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 		return fmt.Errorf("interactive mode: %w", err)
 	}
 
-	m := finalModel.(tui.Model)
+	m, ok := finalModel.(tui.Model)
+	if !ok {
+		return fmt.Errorf("internal error: unexpected model type %T", finalModel)
+	}
 	if m.Aborted() {
 		return nil
 	}
