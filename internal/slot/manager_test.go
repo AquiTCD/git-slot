@@ -284,6 +284,35 @@ func TestMount_SameBranch_Noop(t *testing.T) {
 	assert.False(t, anyCalled, "same branch should be a no-op")
 }
 
+func TestMount_DirtySameBranch_ReturnsNil(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	var anyCalled bool
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/slots/work", Branch: "feature/x"},
+			}, nil
+		},
+		isDirtyFn: func(path string) (bool, error) { return true, nil },
+		switchFn: func(path, branch string, discard bool) error {
+			anyCalled = true
+			return nil
+		},
+		addFn: func(path, branch string) error {
+			anyCalled = true
+			return nil
+		},
+	}
+
+	mgr := NewManager(cfg, "/base/slots", mock)
+	err := mgr.Mount("work", "feature/x", MountOptions{})
+
+	require.NoError(t, err, "dirty slot already on requested branch should be a no-op")
+	assert.False(t, anyCalled, "no switch or add should be called for same-branch no-op")
+}
+
 func TestMount_CreateBranch_ActiveSlot(t *testing.T) {
 	cfg := &config.Config{
 		Slots: []config.SlotDefinition{{Name: "work"}},
