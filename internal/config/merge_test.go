@@ -103,19 +103,28 @@ func TestMerge_HooksFieldLevel(t *testing.T) {
 	})
 }
 
+func boolPtr(b bool) *bool { return &b }
+
 func TestMerge_LaunchShellOverride(t *testing.T) {
 	t.Run("override true wins over base false", func(t *testing.T) {
-		base := &Config{LaunchShell: false}
-		override := &Config{LaunchShell: true}
+		base := &Config{LaunchShell: boolPtr(false)}
+		override := &Config{LaunchShell: boolPtr(true)}
 		got := Merge(base, override)
-		assert.True(t, got.LaunchShell)
+		assert.Equal(t, boolPtr(true), got.LaunchShell)
 	})
 
-	t.Run("override false does not override base true", func(t *testing.T) {
-		base := &Config{LaunchShell: true}
-		override := &Config{LaunchShell: false}
+	t.Run("override false explicitly overrides base true", func(t *testing.T) {
+		base := &Config{LaunchShell: boolPtr(true)}
+		override := &Config{LaunchShell: boolPtr(false)}
 		got := Merge(base, override)
-		assert.True(t, got.LaunchShell)
+		assert.Equal(t, boolPtr(false), got.LaunchShell)
+	})
+
+	t.Run("override nil does not override base true", func(t *testing.T) {
+		base := &Config{LaunchShell: boolPtr(true)}
+		override := &Config{LaunchShell: nil}
+		got := Merge(base, override)
+		assert.Equal(t, boolPtr(true), got.LaunchShell)
 	})
 }
 
