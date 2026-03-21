@@ -39,11 +39,22 @@ func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) er
 	s.Branch = wt.Branch
 	s.HeadHash = wt.HeadHash
 
-	dirty, err := m.wt.IsDirty(s.Path)
+	dirtyCount, err := m.wt.DirtyCount(s.Path)
 	if err != nil {
 		return err
 	}
-	s.IsDirty = dirty
+	s.DirtyCount = dirtyCount
+	s.IsDirty = dirtyCount > 0
+
+	aheadCount, err := m.wt.AheadCount(s.Path)
+	if err != nil {
+		s.HasUpstream = false
+		s.AheadCount = 0
+	} else {
+		s.HasUpstream = true
+		s.AheadCount = aheadCount
+	}
+
 	return nil
 }
 
