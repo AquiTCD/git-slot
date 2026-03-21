@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-03-21
+
+### Added
+
+- `git slot list` now shows dirty file count (`*N`) and upstream ahead count (`↑N`) for each active slot. Upstream ahead uses local cache only (no fetch). When upstream is not configured, the `↑` indicator is omitted.
+- `.git-slot/config.toml` is now supported as a third config layer with the highest priority (global → project → local). Intended to be gitignored and symlinked across worktrees for machine-specific or shared local settings.
+- `has_upstream` field added to `--json` output of `git slot list`, disambiguating `ahead_count: 0` from "no upstream configured".
+
+### Changed
+
+- `Slot.IsDirty` bool field removed; dirty state is now derived from `DirtyCount > 0` everywhere, eliminating the possibility of incoherent state.
+- `StyleAheadMark` added to TUI styles, distinct from `StyleDirtyMark` (cyan vs red).
+
 ## [0.7.2] - 2026-03-20
 
 ### Changed
@@ -206,6 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.8.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.0
 [0.7.2]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.2
 [0.7.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.1
 [0.7.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.0
