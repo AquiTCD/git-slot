@@ -24,7 +24,6 @@ func TestSlotToJSON(t *testing.T) {
 				State:    slot.SlotActive,
 				Branch:   "feature/nice-ui",
 				HeadHash: "a1b2c3d",
-	
 			},
 			want: jsonSlot{
 				Name:   "main-work",
@@ -213,7 +212,6 @@ func TestWriteJSON_StatusAll(t *testing.T) {
 				State:    slot.SlotActive,
 				Branch:   "feature/nice-ui",
 				HeadHash: "a1b2c3d",
-	
 			},
 			CommitSubject: "feat: add nice UI component",
 		},

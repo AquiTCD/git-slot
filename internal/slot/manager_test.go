@@ -182,7 +182,6 @@ func TestGetPath_ActiveSlot(t *testing.T) {
 				{Path: "/base/slots/work", Branch: "main"},
 			}, nil
 		},
-
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -459,7 +458,6 @@ func TestMount_BranchInUse_OtherSlot(t *testing.T) {
 				{Path: "/base/slots/hotfix", Branch: "feature/x"},
 			}, nil
 		},
-
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
@@ -482,7 +480,6 @@ func TestMount_BranchInUse_GwqWorktree(t *testing.T) {
 				{Path: "/other/worktree/path", Branch: "feature/x"},
 			}, nil
 		},
-
 	}
 
 	mgr := NewManager(cfg, "/base/slots", mock)
