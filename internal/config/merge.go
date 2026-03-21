@@ -13,7 +13,7 @@ func Merge(base, override *Config) *Config {
 
 	merged := &Config{
 		WtBasePath:  base.WtBasePath,
-		LaunchShell: base.LaunchShell,
+		LaunchShell: copyBoolPtr(base.LaunchShell),
 		Slots:       copySlots(base.Slots),
 		Hooks:       copyHooks(base.Hooks),
 	}
@@ -22,8 +22,8 @@ func Merge(base, override *Config) *Config {
 		merged.WtBasePath = override.WtBasePath
 	}
 
-	if override.LaunchShell {
-		merged.LaunchShell = true
+	if override.LaunchShell != nil {
+		merged.LaunchShell = override.LaunchShell
 	}
 
 	for _, overrideSlot := range override.Slots {
@@ -59,11 +59,19 @@ func Merge(base, override *Config) *Config {
 func copyConfig(src *Config) *Config {
 	dst := &Config{
 		WtBasePath:  src.WtBasePath,
-		LaunchShell: src.LaunchShell,
+		LaunchShell: copyBoolPtr(src.LaunchShell),
 		Slots:       copySlots(src.Slots),
 		Hooks:       copyHooks(src.Hooks),
 	}
 	return dst
+}
+
+func copyBoolPtr(b *bool) *bool {
+	if b == nil {
+		return nil
+	}
+	v := *b
+	return &v
 }
 
 func copyHooks(src HooksConfig) HooksConfig {
