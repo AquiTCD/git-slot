@@ -288,6 +288,53 @@ func TestWriteJSON_OmitsEmptyOptionalFields(t *testing.T) {
 	assert.False(t, hasChanges, "changes should be omitted when empty")
 }
 
+// F2-J1: slotToJSON includes dirty_count and ahead_count fields
+func TestSlotToJSON_RichFields_DirtyAndAhead(t *testing.T) {
+	s := slot.Slot{
+		Name:        "work",
+		Path:        "/slots/work",
+		State:       slot.SlotActive,
+		Branch:      "feat/auth",
+		HeadHash:    "abc1234",
+		IsDirty:     true,
+		DirtyCount:  2,
+		HasUpstream: true,
+		AheadCount:  1,
+	}
+	got := slotToJSON(s)
+	assert.Equal(t, 2, got.DirtyCount)
+	assert.Equal(t, 1, got.AheadCount)
+}
+
+// F2-J2: clean slot with upstream has dirty_count=0 and ahead_count=0 in JSON
+func TestSlotToJSON_RichFields_Clean(t *testing.T) {
+	s := slot.Slot{
+		Name:        "work",
+		Path:        "/slots/work",
+		State:       slot.SlotActive,
+		Branch:      "main",
+		HeadHash:    "abc1234",
+		IsDirty:     false,
+		DirtyCount:  0,
+		HasUpstream: true,
+		AheadCount:  0,
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeJSON(&buf, slotToJSON(s)))
+
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &raw))
+
+	dirtyCount, ok := raw["dirty_count"]
+	assert.True(t, ok, "dirty_count should be present even when 0")
+	assert.Equal(t, float64(0), dirtyCount)
+
+	aheadCount, ok := raw["ahead_count"]
+	assert.True(t, ok, "ahead_count should be present even when 0")
+	assert.Equal(t, float64(0), aheadCount)
+}
+
 func TestWriteJSON_PrettyPrinted(t *testing.T) {
 	var buf bytes.Buffer
 	require.NoError(t, writeJSON(&buf, jsonSlotList{Slots: []jsonSlot{
