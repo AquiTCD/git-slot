@@ -90,7 +90,7 @@ func renderSlotLine(s slot.Slot, nameWidth int, hasIcons, noColor bool) string {
 			if noColor {
 				parts = append(parts, aheadMark)
 			} else {
-				parts = append(parts, StyleDirtyMark.Render(aheadMark))
+				parts = append(parts, StyleAheadMark.Render(aheadMark))
 			}
 		}
 	}
