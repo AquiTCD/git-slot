@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - 2026-03-21
+
+### Fixed
+
+- `runMount` now propagates `GetPath` errors instead of silently writing an empty path to stdout.
+- Interactive mode logs a `Warning:` to stderr when `ListBranches` fails, so users know why branch suggestions are unavailable.
+- Hook fields in `Merge()` now use a nil-check instead of `len > 0`, allowing a higher-priority config to explicitly clear hooks with an empty array (e.g. `pre_mount = []`).
+
 ## [0.8.1] - 2026-03-21
 
 ### Fixed
@@ -228,6 +236,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.8.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.0
 [0.7.2]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.2
 [0.7.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.1
+[0.8.2]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.2
 [0.8.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.1
 [0.7.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.0
 [0.6.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.6.0
