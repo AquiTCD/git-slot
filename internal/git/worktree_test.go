@@ -331,3 +331,63 @@ func TestExecWorktree_StatusShort_Dirty(t *testing.T) {
 	require.Len(t, lines, 1)
 	assert.Contains(t, lines[0], "untracked.txt")
 }
+
+// F2-G1: DirtyCount returns the number of dirty files
+func TestExecWorktree_DirtyCount_WithDirtyFiles(t *testing.T) {
+	dir := setupTestRepo(t)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "file1.txt"), []byte("data"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "file2.txt"), []byte("data"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "file3.txt"), []byte("data"), 0o644))
+
+	w := git.NewExecWorktree(dir)
+	count, err := w.DirtyCount(dir)
+
+	require.NoError(t, err)
+	assert.Equal(t, 3, count)
+}
+
+func TestExecWorktree_DirtyCount_Clean(t *testing.T) {
+	dir := setupTestRepo(t)
+	w := git.NewExecWorktree(dir)
+
+	count, err := w.DirtyCount(dir)
+
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
+
+// F2-G2: AheadCount returns the number of commits ahead of upstream
+func TestExecWorktree_AheadCount_WithAheadCommits(t *testing.T) {
+	dir := setupTestRepo(t)
+
+	// Set up a remote-like branch as upstream by creating a "remote" branch
+	// then add commits on top of it
+	run(t, dir, "git", "branch", "upstream-ref")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "commit1.txt"), []byte("c1"), 0o644))
+	run(t, dir, "git", "add", "commit1.txt")
+	run(t, dir, "git", "commit", "-m", "commit 1")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "commit2.txt"), []byte("c2"), 0o644))
+	run(t, dir, "git", "add", "commit2.txt")
+	run(t, dir, "git", "commit", "-m", "commit 2")
+
+	// Configure upstream tracking
+	currentBranch := run(t, dir, "git", "rev-parse", "--abbrev-ref", "HEAD")
+	run(t, dir, "git", "config", "branch."+currentBranch+".remote", ".")
+	run(t, dir, "git", "config", "branch."+currentBranch+".merge", "refs/heads/upstream-ref")
+
+	w := git.NewExecWorktree(dir)
+	count, err := w.AheadCount(dir)
+
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+// F2-G3: AheadCount returns error when upstream is not configured
+func TestExecWorktree_AheadCount_NoUpstream(t *testing.T) {
+	dir := setupTestRepo(t)
+	w := git.NewExecWorktree(dir)
+
+	_, err := w.AheadCount(dir)
+
+	assert.Error(t, err, "should return error when upstream is not configured")
+}
