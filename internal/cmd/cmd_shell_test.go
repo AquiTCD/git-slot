@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/AquiTCD/git-slot/internal/config"
@@ -45,6 +46,29 @@ func TestCheckShellNestingForSet(t *testing.T) {
 		t.Setenv("GSL_SLOT_NAME", "main-work")
 		err := checkShellNestingForSet("hotfix")
 		assert.ErrorIs(t, err, ErrShellNested)
+	})
+}
+
+func TestRunMount_GetPathError(t *testing.T) {
+	t.Run("returns error when GetPath fails after mount", func(t *testing.T) {
+		t.Setenv("GSL_SHELL_SESSION", "")
+
+		mgr := &mockSlotManager{
+			mountFn:   func(_, _ string, _ slot.MountOptions) error { return nil },
+			getPathFn: func(_ string) (string, error) { return "", errors.New("worktree not found") },
+		}
+		a := &app{
+			mgr:      mgr,
+			cfg:      &config.Config{LaunchShell: nil},
+			basePath: "/slots",
+			repoRoot: "/repo",
+		}
+
+		var buf bytes.Buffer
+		err := runMount(a, "work", "feat/x", mountOptions{}, &buf)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "worktree not found")
+		assert.Empty(t, buf.String())
 	})
 }
 

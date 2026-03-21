@@ -40,16 +40,16 @@ func Merge(base, override *Config) *Config {
 		}
 	}
 
-	if len(override.Hooks.PreMount) > 0 {
+	if override.Hooks.PreMount != nil {
 		merged.Hooks.PreMount = copyHookActions(override.Hooks.PreMount)
 	}
-	if len(override.Hooks.PostMount) > 0 {
+	if override.Hooks.PostMount != nil {
 		merged.Hooks.PostMount = copyHookActions(override.Hooks.PostMount)
 	}
-	if len(override.Hooks.PreClear) > 0 {
+	if override.Hooks.PreClear != nil {
 		merged.Hooks.PreClear = copyHookActions(override.Hooks.PreClear)
 	}
-	if len(override.Hooks.PostClear) > 0 {
+	if override.Hooks.PostClear != nil {
 		merged.Hooks.PostClear = copyHookActions(override.Hooks.PostClear)
 	}
 

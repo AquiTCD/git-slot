@@ -55,7 +55,10 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 		return launchSlotShell(a, slotName)
 	}
 
-	path, _ := a.mgr.GetPath(slotName)
+	path, err := a.mgr.GetPath(slotName)
+	if err != nil {
+		return err
+	}
 	_, _ = fmt.Fprintln(out, path)
 	return nil
 }
@@ -102,6 +105,7 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 
 	branches, err := a.wt.ListBranches()
 	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: could not list branches: %v\n", err)
 		branches = nil
 	}
 

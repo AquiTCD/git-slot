@@ -101,6 +101,38 @@ func TestMerge_HooksFieldLevel(t *testing.T) {
 
 		assert.Equal(t, "override-hook", got.Hooks.PostMount[0].Command)
 	})
+
+	t.Run("empty slice override explicitly clears base hook", func(t *testing.T) {
+		base := &Config{Hooks: HooksConfig{
+			PreMount:  []HookAction{{Type: "run", Command: "base-pre-mount"}},
+			PostMount: []HookAction{{Type: "run", Command: "base-post-mount"}},
+			PreClear:  []HookAction{{Type: "run", Command: "base-pre-clear"}},
+			PostClear: []HookAction{{Type: "run", Command: "base-post-clear"}},
+		}}
+		override := &Config{Hooks: HooksConfig{
+			PreMount:  []HookAction{},
+			PostMount: []HookAction{},
+			PreClear:  []HookAction{},
+			PostClear: []HookAction{},
+		}}
+
+		got := Merge(base, override)
+
+		assert.Empty(t, got.Hooks.PreMount, "empty override should clear PreMount")
+		assert.Empty(t, got.Hooks.PostMount, "empty override should clear PostMount")
+		assert.Empty(t, got.Hooks.PreClear, "empty override should clear PreClear")
+		assert.Empty(t, got.Hooks.PostClear, "empty override should clear PostClear")
+	})
+
+	t.Run("nil hook field does not override base", func(t *testing.T) {
+		base := &Config{Hooks: HooksConfig{PreMount: []HookAction{{Type: "run", Command: "base-hook"}}}}
+		override := &Config{Hooks: HooksConfig{PreMount: nil}}
+
+		got := Merge(base, override)
+
+		require.Len(t, got.Hooks.PreMount, 1)
+		assert.Equal(t, "base-hook", got.Hooks.PreMount[0].Command)
+	})
 }
 
 func boolPtr(b bool) *bool { return &b }
