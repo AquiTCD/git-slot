@@ -105,6 +105,7 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 
 	branches, err := a.wt.ListBranches()
 	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: could not list branches: %v\n", err)
 		branches = nil
 	}
 
