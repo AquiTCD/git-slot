@@ -39,11 +39,21 @@ func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) er
 	s.Branch = wt.Branch
 	s.HeadHash = wt.HeadHash
 
-	dirty, err := m.wt.IsDirty(s.Path)
+	dirtyCount, err := m.wt.DirtyCount(s.Path)
 	if err != nil {
 		return err
 	}
-	s.IsDirty = dirty
+	s.DirtyCount = dirtyCount
+
+	aheadCount, err := m.wt.AheadCount(s.Path)
+	if err != nil {
+		s.HasUpstream = false
+		s.AheadCount = 0
+	} else {
+		s.HasUpstream = true
+		s.AheadCount = aheadCount
+	}
+
 	return nil
 }
 
@@ -109,7 +119,7 @@ func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 		return nil
 	}
 
-	if slot.State == SlotActive && slot.IsDirty && !opts.Force {
+	if slot.State == SlotActive && slot.DirtyCount > 0 && !opts.Force {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 
@@ -178,7 +188,7 @@ func (m *Manager) Clear(slotName string, opts ClearOptions) error {
 		return &SlotError{SlotName: slotName, Err: ErrSlotAlreadyEmpty}
 	}
 
-	if slot.IsDirty && !opts.Force {
+	if slot.DirtyCount > 0 && !opts.Force {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 

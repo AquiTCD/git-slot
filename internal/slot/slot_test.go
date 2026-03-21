@@ -14,12 +14,12 @@ func TestSlot_DisplayState_Empty(t *testing.T) {
 }
 
 func TestSlot_DisplayState_Active(t *testing.T) {
-	s := &Slot{State: SlotActive, IsDirty: false}
+	s := &Slot{State: SlotActive, DirtyCount: 0}
 	assert.Equal(t, "active", s.DisplayState())
 }
 
 func TestSlot_DisplayState_Dirty(t *testing.T) {
-	s := &Slot{State: SlotActive, IsDirty: true}
+	s := &Slot{State: SlotActive, DirtyCount: 1}
 	assert.Equal(t, "dirty", s.DisplayState())
 }
 

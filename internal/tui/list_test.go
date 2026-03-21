@@ -40,11 +40,11 @@ func TestRenderSlotList_NoColor_ActiveSlot(t *testing.T) {
 
 func TestRenderSlotList_NoColor_DirtySlot(t *testing.T) {
 	slots := []slot.Slot{
-		{Name: "fire", State: slot.SlotActive, Branch: "hotfix/y", HeadHash: "def5678", IsDirty: true},
+		{Name: "fire", State: slot.SlotActive, Branch: "hotfix/y", HeadHash: "def5678", DirtyCount: 2},
 	}
 	result := RenderSlotList(slots, true)
 	assert.Contains(t, result, "[dirty]")
-	assert.Contains(t, result, "*dirty")
+	assert.Contains(t, result, "*2")
 }
 
 func TestRenderSlotList_NoIcons(t *testing.T) {
@@ -86,4 +86,56 @@ func TestRenderSlotList_WithColor(t *testing.T) {
 	result := RenderSlotList(slots, false)
 	assert.Contains(t, result, "wood")
 	assert.Contains(t, result, "main")
+}
+
+// F2-T1: dirty 3 files => "*3" in output
+func TestRenderSlotList_DirtyCount(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
+			DirtyCount: 3, HasUpstream: true, AheadCount: 0},
+	}
+	result := RenderSlotList(slots, true)
+	assert.Contains(t, result, "*3")
+}
+
+// F2-T2: ahead 2 commits => "↑2" in output
+func TestRenderSlotList_AheadCount(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
+			DirtyCount: 0, HasUpstream: true, AheadCount: 2},
+	}
+	result := RenderSlotList(slots, true)
+	assert.Contains(t, result, "↑2")
+}
+
+// F2-T3: clean + ahead 0 => no "*", but "↑0" shown
+func TestRenderSlotList_CleanWithUpstream(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "main", HeadHash: "abc1234",
+			DirtyCount: 0, HasUpstream: true, AheadCount: 0},
+	}
+	result := RenderSlotList(slots, true)
+	assert.NotContains(t, result, "*")
+	assert.Contains(t, result, "↑0")
+	assert.Contains(t, result, "clean")
+}
+
+// F2-T4: empty slot => no "*" and no "↑"
+func TestRenderSlotList_EmptySlot_NoRichMarkers(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotEmpty},
+	}
+	result := RenderSlotList(slots, true)
+	assert.NotContains(t, result, "*")
+	assert.NotContains(t, result, "↑")
+}
+
+// F2-T5: upstream not set => no "↑"
+func TestRenderSlotList_NoUpstream(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
+			DirtyCount: 0, HasUpstream: false, AheadCount: 0},
+	}
+	result := RenderSlotList(slots, true)
+	assert.NotContains(t, result, "↑")
 }

@@ -72,11 +72,25 @@ func renderSlotLine(s slot.Slot, nameWidth int, hasIcons, noColor bool) string {
 			parts = append(parts, StyleBranch.Render(s.Branch))
 			parts = append(parts, StyleHash.Render(fmt.Sprintf("(%s)", s.HeadHash)))
 		}
-		if s.IsDirty {
+
+		var dirtyMark string
+		if s.DirtyCount > 0 {
+			dirtyMark = fmt.Sprintf("*%d", s.DirtyCount)
+		} else {
+			dirtyMark = "clean"
+		}
+		if noColor {
+			parts = append(parts, dirtyMark)
+		} else {
+			parts = append(parts, StyleDirtyMark.Render(dirtyMark))
+		}
+
+		if s.HasUpstream {
+			aheadMark := fmt.Sprintf("↑%d", s.AheadCount)
 			if noColor {
-				parts = append(parts, "*dirty")
+				parts = append(parts, aheadMark)
 			} else {
-				parts = append(parts, StyleDirtyMark.Render("*dirty"))
+				parts = append(parts, StyleAheadMark.Render(aheadMark))
 			}
 		}
 	}

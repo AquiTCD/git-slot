@@ -17,7 +17,7 @@ Git Slot は、`git worktree` を TOML 設定で定義された固定名のス�
 - **固定ワークスペース** — スロットは設定で定義された固定名を持ち、パスが安定します
 - **設定ベース** — スロットの名前・数はすべて TOML で定義。プリセットはありません
 - **gwq 互換** — gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）と共存できます
-- **階層型設定** — プロジェクト固有設定がグローバル設定をオーバーライドします
+- **階層型設定** — グローバル・プロジェクト・ローカルの3階層でオーバーライドします
 - **安全ガード** — ブランチ重複検出、dirty 状態の保護を備えています
 - **インタラクティブ TUI** — スロット選択・ブランチ入力を対話的に操作できます（あいまいフィルタ対応）
 - **Git サブコマンド** — `git slot` として自然に使えます
@@ -121,7 +121,7 @@ git slot set main-work feature/nice-ui
 # 新規ブランチを作成して装填
 git slot set hotfix -c hotfix/urgent-bug
 
-# スロット一覧を確認
+# スロット一覧を確認（dirty ファイル数・upstream との差分を表示）
 git slot list
 
 # JSON 形式で出力
@@ -177,6 +177,14 @@ git slot set main-work feature/nice-ui --no-shell
 
 1. **Global Config** — `~/.config/git-slot/config.toml`
 2. **Project Config** — `<project-root>/git-slot.toml`
+3. **Local Config** — `<project-root>/.git-slot/config.toml`
+
+Local Config は `.gitignore` に追加してリポジトリに含めない運用を想定しています。マシン固有の設定や、worktree をまたいで共有したいローカル専用の設定に使用できます。
+
+```bash
+# .gitignore に追加
+echo ".git-slot/" >> .gitignore
+```
 
 ### 設定例 (`git-slot.toml`)
 
@@ -238,7 +246,7 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `git slot set <slot> <branch>` | スロットにブランチを装填します |
 | `git slot set <slot> -c <branch>` | 新規ブランチを作成して装填します（`-b` も可） |
 | `git slot set <slot>` | スロットのパスを出力します |
-| `git slot list` | スロット一覧を表示します |
+| `git slot list` | スロット一覧を表示します（dirty ファイル数・upstream ahead 数付き） |
 | `git slot clear <slot>` | スロットを解除します |
 | `git slot status [slot]` | スロットの詳細状態を表示します |
 | `git slot init [-g]` | 設定ファイルのテンプレートを生成します（`-g` でグローバル） |

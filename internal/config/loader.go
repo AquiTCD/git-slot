@@ -13,6 +13,7 @@ var ErrNoConfig = errutil.NewExitError("no configuration file found; run `git sl
 type LoadOptions struct {
 	GlobalPath  string
 	ProjectPath string
+	LocalPath   string
 	RepoRoot    string
 }
 
@@ -39,14 +40,20 @@ func LoadConfig(opts LoadOptions) (*Config, error) {
 		projectPath = filepath.Join(opts.RepoRoot, "git-slot.toml")
 	}
 
+	localPath := opts.LocalPath
+	if localPath == "" && opts.RepoRoot != "" {
+		localPath = filepath.Join(opts.RepoRoot, ".git-slot", "config.toml")
+	}
+
 	globalExists := fileExists(globalPath)
 	projectExists := projectPath != "" && fileExists(projectPath)
+	localExists := localPath != "" && fileExists(localPath)
 
-	if !globalExists && !projectExists {
+	if !globalExists && !projectExists && !localExists {
 		return nil, ErrNoConfig
 	}
 
-	var globalCfg, projectCfg *Config
+	var globalCfg, projectCfg, localCfg *Config
 
 	if globalExists {
 		cfg, err := LoadSpecificConfig(globalPath)
@@ -64,15 +71,17 @@ func LoadConfig(opts LoadOptions) (*Config, error) {
 		projectCfg = cfg
 	}
 
-	var final *Config
-	switch {
-	case globalCfg != nil && projectCfg != nil:
-		final = Merge(globalCfg, projectCfg)
-	case globalCfg != nil:
-		final = globalCfg
-	default:
-		final = projectCfg
+	if localExists {
+		cfg, err := LoadSpecificConfig(localPath)
+		if err != nil {
+			return nil, err
+		}
+		localCfg = cfg
 	}
+
+	// Merge handles nil inputs; intermediate is always non-nil.
+	intermediate := Merge(globalCfg, projectCfg)
+	final := Merge(intermediate, localCfg)
 
 	if err := Validate(final); err != nil {
 		return nil, err

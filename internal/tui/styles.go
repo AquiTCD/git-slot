@@ -20,6 +20,7 @@ var (
 	StyleStateDirty  lipgloss.Style
 
 	StyleDirtyMark lipgloss.Style
+	StyleAheadMark lipgloss.Style
 
 	StyleSelected lipgloss.Style
 	StyleCursor   lipgloss.Style
@@ -41,6 +42,7 @@ func init() {
 	StyleStateDirty = renderer.NewStyle().Foreground(lipgloss.Color("3"))
 
 	StyleDirtyMark = renderer.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+	StyleAheadMark = renderer.NewStyle().Foreground(lipgloss.Color("6")).Bold(true)
 
 	StyleSelected = renderer.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
 	StyleCursor = renderer.NewStyle().Foreground(lipgloss.Color("5"))
