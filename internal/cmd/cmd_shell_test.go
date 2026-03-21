@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func boolPtr(b bool) *bool { return &b }
+
 func TestCheckShellNesting(t *testing.T) {
 	t.Run("no nesting when GSL_SHELL_SESSION is unset", func(t *testing.T) {
 		t.Setenv("GSL_SHELL_SESSION", "")
@@ -75,7 +77,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 
 		a := &app{
 			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: true, Slots: []config.SlotDefinition{{Name: "work"}}},
+			cfg:      &config.Config{LaunchShell: boolPtr(true), Slots: []config.SlotDefinition{{Name: "work"}}},
 			basePath: "/slots",
 			repoRoot: "/repo",
 		}
@@ -97,7 +99,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 
 		a := &app{
 			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: true},
+			cfg:      &config.Config{LaunchShell: boolPtr(true)},
 			basePath: "/slots",
 			repoRoot: "/repo",
 		}
@@ -117,7 +119,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		mgr := &mockSlotManager{}
 		a := &app{
 			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: true},
+			cfg:      &config.Config{LaunchShell: boolPtr(true)},
 			basePath: "/slots",
 			repoRoot: "/repo",
 		}
@@ -141,7 +143,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 
 		a := &app{
 			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: true},
+			cfg:      &config.Config{LaunchShell: boolPtr(true)},
 			basePath: "/slots",
 			repoRoot: "/repo",
 		}
