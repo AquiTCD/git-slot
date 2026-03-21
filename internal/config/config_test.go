@@ -165,7 +165,7 @@ launch_shell = true
 name = "dev"
 `,
 			expected: &Config{
-				LaunchShell: true,
+				LaunchShell: boolPtr(true),
 				Slots: []SlotDefinition{
 					{Name: "dev"},
 				},

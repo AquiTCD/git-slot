@@ -19,7 +19,7 @@ type mountOptions struct {
 }
 
 func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Writer) error {
-	shouldLaunchShell := a.cfg.LaunchShell && !opts.noShell
+	shouldLaunchShell := a.cfg.LaunchShell != nil && *a.cfg.LaunchShell && !opts.noShell
 
 	if shouldLaunchShell {
 		if err := checkShellNestingForSet(slotName); err != nil {
@@ -85,7 +85,7 @@ func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 }
 
 func runInteractive(a *app, force, noShell bool, out io.Writer) error {
-	if a.cfg.LaunchShell && !noShell {
+	if a.cfg.LaunchShell != nil && *a.cfg.LaunchShell && !noShell {
 		if err := checkShellNesting(); err != nil {
 			return err
 		}
