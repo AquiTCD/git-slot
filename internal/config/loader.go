@@ -79,7 +79,7 @@ func LoadConfig(opts LoadOptions) (*Config, error) {
 		localCfg = cfg
 	}
 
-	// Merge(Merge(global, project), local)
+	// Merge handles nil inputs; intermediate is always non-nil.
 	intermediate := Merge(globalCfg, projectCfg)
 	final := Merge(intermediate, localCfg)
 
