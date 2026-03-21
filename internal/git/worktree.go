@@ -24,6 +24,8 @@ type Worktree interface {
 	SwitchCreate(path, newBranch string) error
 	BranchExists(branch string) (bool, error)
 	IsDirty(path string) (bool, error)
+	DirtyCount(path string) (int, error)
+	AheadCount(path string) (int, error)
 	CommitSubject(path string) (string, error)
 	StatusShort(path string) ([]string, error)
 	ListBranches() ([]string, error)
@@ -148,15 +150,43 @@ func (w *ExecWorktree) BranchExists(branch string) (bool, error) {
 	return false, nil
 }
 
-func (w *ExecWorktree) IsDirty(path string) (bool, error) {
+func (w *ExecWorktree) DirtyCount(path string) (int, error) {
 	cmd := exec.Command("git", "-C", path, "status", "--porcelain")
 
 	out, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("git status: %w", err)
+		return 0, fmt.Errorf("git status: %w", err)
 	}
 
-	return strings.TrimSpace(string(out)) != "", nil
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return 0, nil
+	}
+	return len(strings.Split(raw, "\n")), nil
+}
+
+func (w *ExecWorktree) IsDirty(path string) (bool, error) {
+	count, err := w.DirtyCount(path)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (w *ExecWorktree) AheadCount(path string) (int, error) {
+	cmd := exec.Command("git", "-C", path, "rev-list", "--count", "@{u}..HEAD")
+
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("git rev-list: %w", err)
+	}
+
+	raw := strings.TrimSpace(string(out))
+	var count int
+	if _, err := fmt.Sscan(raw, &count); err != nil {
+		return 0, fmt.Errorf("parse ahead count %q: %w", raw, err)
+	}
+	return count, nil
 }
 
 func (w *ExecWorktree) Switch(path, branch string, discardChanges bool) error {
