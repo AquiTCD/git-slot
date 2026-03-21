@@ -8,13 +8,14 @@ import (
 )
 
 type jsonSlot struct {
-	Name       string `json:"name"`
-	State      string `json:"state"`
-	Branch     string `json:"branch"`
-	Head       string `json:"head"`
-	Path       string `json:"path"`
-	DirtyCount int    `json:"dirty_count"`
-	AheadCount int    `json:"ahead_count"`
+	Name        string `json:"name"`
+	State       string `json:"state"`
+	Branch      string `json:"branch"`
+	Head        string `json:"head"`
+	Path        string `json:"path"`
+	DirtyCount  int    `json:"dirty_count"`
+	AheadCount  int    `json:"ahead_count"`
+	HasUpstream bool   `json:"has_upstream"`
 }
 
 type jsonSlotList struct {
@@ -39,13 +40,14 @@ func writeJSON(w io.Writer, v any) error {
 
 func slotToJSON(s slot.Slot) jsonSlot {
 	return jsonSlot{
-		Name:       s.Name,
-		State:      s.DisplayState(),
-		Branch:     s.Branch,
-		Head:       s.HeadHash,
-		Path:       s.Path,
-		DirtyCount: s.DirtyCount,
-		AheadCount: s.AheadCount,
+		Name:        s.Name,
+		State:       s.DisplayState(),
+		Branch:      s.Branch,
+		Head:        s.HeadHash,
+		Path:        s.Path,
+		DirtyCount:  s.DirtyCount,
+		AheadCount:  s.AheadCount,
+		HasUpstream: s.HasUpstream,
 	}
 }
 
