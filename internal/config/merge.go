@@ -23,7 +23,7 @@ func Merge(base, override *Config) *Config {
 	}
 
 	if override.LaunchShell != nil {
-		merged.LaunchShell = override.LaunchShell
+		merged.LaunchShell = copyBoolPtr(override.LaunchShell)
 	}
 
 	for _, overrideSlot := range override.Slots {
