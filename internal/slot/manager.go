@@ -44,7 +44,6 @@ func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) er
 		return err
 	}
 	s.DirtyCount = dirtyCount
-	s.IsDirty = dirtyCount > 0
 
 	aheadCount, err := m.wt.AheadCount(s.Path)
 	if err != nil {
@@ -120,7 +119,7 @@ func (m *Manager) Mount(slotName, branchName string, opts MountOptions) error {
 		return nil
 	}
 
-	if slot.State == SlotActive && slot.IsDirty && !opts.Force {
+	if slot.State == SlotActive && slot.DirtyCount > 0 && !opts.Force {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 
@@ -189,7 +188,7 @@ func (m *Manager) Clear(slotName string, opts ClearOptions) error {
 		return &SlotError{SlotName: slotName, Err: ErrSlotAlreadyEmpty}
 	}
 
-	if slot.IsDirty && !opts.Force {
+	if slot.DirtyCount > 0 && !opts.Force {
 		return &SlotError{SlotName: slotName, Err: ErrSlotDirty}
 	}
 

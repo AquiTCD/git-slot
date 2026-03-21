@@ -40,7 +40,7 @@ func TestRenderSlotList_NoColor_ActiveSlot(t *testing.T) {
 
 func TestRenderSlotList_NoColor_DirtySlot(t *testing.T) {
 	slots := []slot.Slot{
-		{Name: "fire", State: slot.SlotActive, Branch: "hotfix/y", HeadHash: "def5678", IsDirty: true, DirtyCount: 2},
+		{Name: "fire", State: slot.SlotActive, Branch: "hotfix/y", HeadHash: "def5678", DirtyCount: 2},
 	}
 	result := RenderSlotList(slots, true)
 	assert.Contains(t, result, "[dirty]")
@@ -92,7 +92,7 @@ func TestRenderSlotList_WithColor(t *testing.T) {
 func TestRenderSlotList_DirtyCount(t *testing.T) {
 	slots := []slot.Slot{
 		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
-			IsDirty: true, DirtyCount: 3, HasUpstream: true, AheadCount: 0},
+			DirtyCount: 3, HasUpstream: true, AheadCount: 0},
 	}
 	result := RenderSlotList(slots, true)
 	assert.Contains(t, result, "*3")
@@ -102,7 +102,7 @@ func TestRenderSlotList_DirtyCount(t *testing.T) {
 func TestRenderSlotList_AheadCount(t *testing.T) {
 	slots := []slot.Slot{
 		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
-			IsDirty: false, DirtyCount: 0, HasUpstream: true, AheadCount: 2},
+			DirtyCount: 0, HasUpstream: true, AheadCount: 2},
 	}
 	result := RenderSlotList(slots, true)
 	assert.Contains(t, result, "↑2")
@@ -112,7 +112,7 @@ func TestRenderSlotList_AheadCount(t *testing.T) {
 func TestRenderSlotList_CleanWithUpstream(t *testing.T) {
 	slots := []slot.Slot{
 		{Name: "work", State: slot.SlotActive, Branch: "main", HeadHash: "abc1234",
-			IsDirty: false, DirtyCount: 0, HasUpstream: true, AheadCount: 0},
+			DirtyCount: 0, HasUpstream: true, AheadCount: 0},
 	}
 	result := RenderSlotList(slots, true)
 	assert.NotContains(t, result, "*")
@@ -134,7 +134,7 @@ func TestRenderSlotList_EmptySlot_NoRichMarkers(t *testing.T) {
 func TestRenderSlotList_NoUpstream(t *testing.T) {
 	slots := []slot.Slot{
 		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
-			IsDirty: false, DirtyCount: 0, HasUpstream: false, AheadCount: 0},
+			DirtyCount: 0, HasUpstream: false, AheadCount: 0},
 	}
 	result := RenderSlotList(slots, true)
 	assert.NotContains(t, result, "↑")

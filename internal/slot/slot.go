@@ -13,7 +13,6 @@ type Slot struct {
 	Path        string
 	State       SlotState
 	Branch      string
-	IsDirty     bool
 	HeadHash    string
 	DirtyCount  int
 	AheadCount  int
@@ -24,7 +23,7 @@ func (s *Slot) DisplayState() string {
 	if s.State == SlotEmpty {
 		return "empty"
 	}
-	if s.IsDirty {
+	if s.DirtyCount > 0 {
 		return "dirty"
 	}
 	return "active"

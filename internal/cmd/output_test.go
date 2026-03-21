@@ -24,7 +24,7 @@ func TestSlotToJSON(t *testing.T) {
 				State:    slot.SlotActive,
 				Branch:   "feature/nice-ui",
 				HeadHash: "a1b2c3d",
-				IsDirty:  false,
+	
 			},
 			want: jsonSlot{
 				Name:   "main-work",
@@ -37,19 +37,20 @@ func TestSlotToJSON(t *testing.T) {
 		{
 			name: "dirty slot",
 			slot: slot.Slot{
-				Name:     "dev",
-				Path:     "/home/user/slots/dev",
-				State:    slot.SlotActive,
-				Branch:   "develop",
-				HeadHash: "f00baa",
-				IsDirty:  true,
+				Name:       "dev",
+				Path:       "/home/user/slots/dev",
+				State:      slot.SlotActive,
+				Branch:     "develop",
+				HeadHash:   "f00baa",
+				DirtyCount: 1,
 			},
 			want: jsonSlot{
-				Name:   "dev",
-				State:  "dirty",
-				Branch: "develop",
-				Head:   "f00baa",
-				Path:   "/home/user/slots/dev",
+				Name:       "dev",
+				State:      "dirty",
+				Branch:     "develop",
+				Head:       "f00baa",
+				Path:       "/home/user/slots/dev",
+				DirtyCount: 1,
 			},
 		},
 		{
@@ -85,12 +86,12 @@ func TestStatusToJSON(t *testing.T) {
 			name: "active with changes",
 			status: slot.SlotStatus{
 				Slot: slot.Slot{
-					Name:     "main-work",
-					Path:     "/home/user/slots/main-work",
-					State:    slot.SlotActive,
-					Branch:   "feature/nice-ui",
-					HeadHash: "a1b2c3d",
-					IsDirty:  true,
+					Name:       "main-work",
+					Path:       "/home/user/slots/main-work",
+					State:      slot.SlotActive,
+					Branch:     "feature/nice-ui",
+					HeadHash:   "a1b2c3d",
+					DirtyCount: 2,
 				},
 				CommitSubject: "feat: add nice UI component",
 				Changes:       []string{"M  src/components/Button.tsx", "?? src/components/Modal.tsx"},
@@ -133,12 +134,12 @@ func TestStatusToJSON(t *testing.T) {
 func TestWriteJSON_SlotList(t *testing.T) {
 	slots := []slot.Slot{
 		{
-			Name:     "main-work",
-			Path:     "/home/user/slots/main-work",
-			State:    slot.SlotActive,
-			Branch:   "feature/nice-ui",
-			HeadHash: "a1b2c3d",
-			IsDirty:  true,
+			Name:       "main-work",
+			Path:       "/home/user/slots/main-work",
+			State:      slot.SlotActive,
+			Branch:     "feature/nice-ui",
+			HeadHash:   "a1b2c3d",
+			DirtyCount: 1,
 		},
 		{
 			Name:  "experiment",
@@ -176,12 +177,12 @@ func TestWriteJSON_SlotList(t *testing.T) {
 func TestWriteJSON_Status(t *testing.T) {
 	st := slot.SlotStatus{
 		Slot: slot.Slot{
-			Name:     "main-work",
-			Path:     "/home/user/slots/main-work",
-			State:    slot.SlotActive,
-			Branch:   "feature/nice-ui",
-			HeadHash: "a1b2c3d",
-			IsDirty:  true,
+			Name:       "main-work",
+			Path:       "/home/user/slots/main-work",
+			State:      slot.SlotActive,
+			Branch:     "feature/nice-ui",
+			HeadHash:   "a1b2c3d",
+			DirtyCount: 1,
 		},
 		CommitSubject: "feat: add nice UI component",
 		Changes:       []string{"M  src/components/Button.tsx", "?? src/components/Modal.tsx"},
@@ -212,7 +213,7 @@ func TestWriteJSON_StatusAll(t *testing.T) {
 				State:    slot.SlotActive,
 				Branch:   "feature/nice-ui",
 				HeadHash: "a1b2c3d",
-				IsDirty:  false,
+	
 			},
 			CommitSubject: "feat: add nice UI component",
 		},
@@ -296,7 +297,6 @@ func TestSlotToJSON_RichFields_DirtyAndAhead(t *testing.T) {
 		State:       slot.SlotActive,
 		Branch:      "feat/auth",
 		HeadHash:    "abc1234",
-		IsDirty:     true,
 		DirtyCount:  2,
 		HasUpstream: true,
 		AheadCount:  1,
@@ -304,6 +304,7 @@ func TestSlotToJSON_RichFields_DirtyAndAhead(t *testing.T) {
 	got := slotToJSON(s)
 	assert.Equal(t, 2, got.DirtyCount)
 	assert.Equal(t, 1, got.AheadCount)
+	assert.True(t, got.HasUpstream)
 }
 
 // F2-J2: clean slot with upstream has dirty_count=0 and ahead_count=0 in JSON
@@ -314,7 +315,6 @@ func TestSlotToJSON_RichFields_Clean(t *testing.T) {
 		State:       slot.SlotActive,
 		Branch:      "main",
 		HeadHash:    "abc1234",
-		IsDirty:     false,
 		DirtyCount:  0,
 		HasUpstream: true,
 		AheadCount:  0,
@@ -333,6 +333,10 @@ func TestSlotToJSON_RichFields_Clean(t *testing.T) {
 	aheadCount, ok := raw["ahead_count"]
 	assert.True(t, ok, "ahead_count should be present even when 0")
 	assert.Equal(t, float64(0), aheadCount)
+
+	hasUpstream, ok := raw["has_upstream"]
+	assert.True(t, ok, "has_upstream should be present")
+	assert.Equal(t, true, hasUpstream)
 }
 
 func TestWriteJSON_PrettyPrinted(t *testing.T) {
