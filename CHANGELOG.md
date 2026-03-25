@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.3] - 2026-03-25
+
+### Added
+
+- One-line stderr notice before starting a slot shell (path-only output stays silent for piping).
+- `launch_shell` parity: TUI selection of an already-active slot and `git slot set <slot>` (one argument) now launch a slot shell when configured, matching mount behaviour.
+
+### Fixed
+
+- Slot shell: `chdir` to the worktree before `exec`, sync `PWD` in the environment, and reattach stdout/stderr to `/dev/tty` when they are not terminals (e.g. under the `gsl` wrapper’s command substitution).
+
 ## [0.8.2] - 2026-03-21
 
 ### Fixed
@@ -233,6 +244,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Environment variable passing to hooks (`GS_SLOT_NAME`, `GS_SLOT_PATH`, `GS_BRANCH`, `GS_REPO_ROOT`, `GS_ACTION`)
 - Hook timeout support
 
+[0.8.3]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.3
 [0.8.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.0
 [0.7.2]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.2
 [0.7.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.7.1
