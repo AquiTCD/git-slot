@@ -10,6 +10,8 @@ import (
 
 type HookAction int
 
+const ActionMixed HookAction = -1
+
 const (
 	ActionNone HookAction = iota
 	ActionSymlink
@@ -51,7 +53,7 @@ func (item *HookItem) EffectiveAction() HookAction {
 	first := item.Children[0].Action
 	for _, c := range item.Children[1:] {
 		if c.Action != first {
-			return HookAction(-1)
+			return ActionMixed
 		}
 	}
 	return first
@@ -316,7 +318,7 @@ func (m HookModel) View() string {
 func (m HookModel) formatAction(item *HookItem) string {
 	if item.IsDir && len(item.Children) > 0 {
 		eff := item.EffectiveAction()
-		if eff == HookAction(-1) {
+		if eff == ActionMixed {
 			tag := "[Mixed]"
 			if !m.noColor {
 				tag = StyleStateDirty.Render(tag)
