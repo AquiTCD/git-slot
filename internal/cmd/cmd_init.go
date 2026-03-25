@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/AquiTCD/git-slot/internal/config"
@@ -17,7 +16,7 @@ var initCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		global, _ := cmd.Flags().GetBool("global")
 		force, _ := cmd.Flags().GetBool("force")
-		return runInit(cmd.OutOrStdout(), global, force)
+		return runInit(global, force)
 	},
 }
 
@@ -28,7 +27,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 }
 
-func runInit(out io.Writer, global, force bool) error {
+func runInit(global, force bool) error {
 	detector := git.NewExecDetector("")
 	repoRoot, _ := detector.RepoRoot()
 

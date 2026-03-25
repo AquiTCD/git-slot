@@ -11,7 +11,6 @@ import (
 	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/AquiTCD/git-slot/internal/git"
 	"github.com/AquiTCD/git-slot/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
@@ -108,19 +107,16 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 	noColor := tui.IsNoColor()
 	model := tui.NewHookTreeModel(treeItems, expandFn, noColor)
 
-	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
-	finalModel, err := p.Run()
+	m, aborted, err := runTUI[tui.HookModel](model)
 	if err != nil {
-		return fmt.Errorf("hook helper tui: %w", err)
+		return err
 	}
-
-	m := finalModel.(tui.HookModel)
-	if m.Aborted() {
+	if aborted {
 		return nil
 	}
 
 	results := m.GetResults()
-	return updateConfigWithHooks(a, results, out, global)
+	return updateConfigWithHooks(a, results, out, configPath)
 }
 
 func aggregateItems(items []tui.HookItem, threshold int) []*tui.HookItem {
@@ -242,12 +238,7 @@ func generateHooksTOML(originalContent string, hooks []config.HookAction) (strin
 	return out.String(), nil
 }
 
-func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global bool) error {
-	configPath, err := resolveConfigPath(a.repoRoot, global)
-	if err != nil {
-		return err
-	}
-
+func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, configPath string) error {
 	var originalContent string
 	if data, err := os.ReadFile(configPath); err == nil {
 		originalContent = string(data)
@@ -279,10 +270,6 @@ func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global b
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	loc := "project"
-	if global {
-		loc = "global"
-	}
-	_, _ = fmt.Fprintf(out, "Successfully updated %s git-slot.toml while preserving comments! 💎\n", loc)
+	_, _ = fmt.Fprintf(out, "Successfully updated %s while preserving comments! 💎\n", configPath)
 	return nil
 }

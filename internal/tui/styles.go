@@ -48,6 +48,13 @@ func init() {
 	StyleCursor = renderer.NewStyle().Foreground(lipgloss.Color("5"))
 }
 
+func render(s lipgloss.Style, text string, noColor bool) string {
+	if noColor {
+		return text
+	}
+	return s.Render(text)
+}
+
 func StateStyle(state string) lipgloss.Style {
 	switch state {
 	case "active":

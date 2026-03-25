@@ -5,11 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/AquiTCD/git-slot/internal/hook"
-	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type mountOptions struct {
@@ -19,7 +16,7 @@ type mountOptions struct {
 }
 
 func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Writer) error {
-	shouldLaunchShell := a.cfg.LaunchShell != nil && *a.cfg.LaunchShell && !opts.noShell
+	shouldLaunchShell := wantShell(a.cfg, opts.noShell)
 
 	if shouldLaunchShell {
 		if err := checkShellNestingForSet(slotName); err != nil {
@@ -30,9 +27,7 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 		}
 	}
 
-	hookRunner := hook.NewRunner(out, os.Stderr)
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-	env := buildHookEnv(a.cfg, slotName, slotPath, branchName, a.repoRoot, "mount")
+	hookRunner, env := newHookContext(a, slotName, branchName, "mount", out)
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreMount, env); err != nil {
 		return fmt.Errorf("pre-mount hook: %w", err)
@@ -58,21 +53,6 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 	return runGetPath(a.mgr, slotName, out)
 }
 
-func isInsideSlotShell() bool {
-	return os.Getenv("GSL_SHELL_SESSION") != ""
-}
-
-func checkShellNestingForSet(targetSlot string) error {
-	if !isInsideSlotShell() {
-		return nil
-	}
-	currentSlot := os.Getenv("GSL_SLOT_NAME")
-	if currentSlot == targetSlot {
-		return nil
-	}
-	return ErrShellNested
-}
-
 func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 	path, err := mgr.GetPath(slotName)
 	if err != nil {
@@ -87,7 +67,7 @@ func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 // `git slot set <slot>` (one argument), TUI selection of an active slot only, and
 // runMount's "same slot inside shell → print path" behaviour.
 func runGetPathOrLaunchShell(a *app, slotName string, noShell bool, out io.Writer) error {
-	if a.cfg.LaunchShell != nil && *a.cfg.LaunchShell && !noShell {
+	if wantShell(a.cfg, noShell) {
 		if err := checkShellNestingForSet(slotName); err != nil {
 			return err
 		}
@@ -106,7 +86,7 @@ func runGetPathOrLaunchShell(a *app, slotName string, noShell bool, out io.Write
 }
 
 func runInteractive(a *app, force, noShell bool, out io.Writer) error {
-	if a.cfg.LaunchShell != nil && *a.cfg.LaunchShell && !noShell {
+	if wantShell(a.cfg, noShell) {
 		if err := checkShellNesting(); err != nil {
 			return err
 		}
@@ -130,17 +110,11 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 	noColor := tui.IsNoColor()
 	model := tui.NewInteractiveModel(slots, branches, noColor)
 
-	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
-	finalModel, err := p.Run()
+	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {
-		return fmt.Errorf("interactive mode: %w", err)
+		return err
 	}
-
-	m, ok := finalModel.(tui.Model)
-	if !ok {
-		return fmt.Errorf("internal error: unexpected model type %T", finalModel)
-	}
-	if m.Aborted() {
+	if aborted {
 		return nil
 	}
 

@@ -42,36 +42,19 @@ func renderSlotLine(s slot.Slot, nameWidth int, hasIcons, noColor bool) string {
 		if s.Icon != "" {
 			icon = s.Icon
 		}
-		if noColor {
-			parts = append(parts, icon)
-		} else {
-			parts = append(parts, StyleIcon.Render(icon))
-		}
+		parts = append(parts, render(StyleIcon, icon, noColor))
 	}
 
 	name := fmt.Sprintf("%-*s", nameWidth, s.Name)
-	if noColor {
-		parts = append(parts, name)
-	} else {
-		parts = append(parts, StyleName.Render(name))
-	}
+	parts = append(parts, render(StyleName, name, noColor))
 
 	state := s.DisplayState()
 	stateTag := fmt.Sprintf("[%s]", state)
-	if noColor {
-		parts = append(parts, stateTag)
-	} else {
-		parts = append(parts, StateStyle(state).Render(stateTag))
-	}
+	parts = append(parts, render(StateStyle(state), stateTag, noColor))
 
 	if s.State == slot.SlotActive {
-		if noColor {
-			parts = append(parts, s.Branch)
-			parts = append(parts, fmt.Sprintf("(%s)", s.HeadHash))
-		} else {
-			parts = append(parts, StyleBranch.Render(s.Branch))
-			parts = append(parts, StyleHash.Render(fmt.Sprintf("(%s)", s.HeadHash)))
-		}
+		parts = append(parts, render(StyleBranch, s.Branch, noColor))
+		parts = append(parts, render(StyleHash, fmt.Sprintf("(%s)", s.HeadHash), noColor))
 
 		var dirtyMark string
 		if s.DirtyCount > 0 {
@@ -79,19 +62,11 @@ func renderSlotLine(s slot.Slot, nameWidth int, hasIcons, noColor bool) string {
 		} else {
 			dirtyMark = "clean"
 		}
-		if noColor {
-			parts = append(parts, dirtyMark)
-		} else {
-			parts = append(parts, StyleDirtyMark.Render(dirtyMark))
-		}
+		parts = append(parts, render(StyleDirtyMark, dirtyMark, noColor))
 
 		if s.HasUpstream {
 			aheadMark := fmt.Sprintf("↑%d", s.AheadCount)
-			if noColor {
-				parts = append(parts, aheadMark)
-			} else {
-				parts = append(parts, StyleAheadMark.Render(aheadMark))
-			}
+			parts = append(parts, render(StyleAheadMark, aheadMark, noColor))
 		}
 	}
 

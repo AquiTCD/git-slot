@@ -311,7 +311,7 @@ func TestEffectiveAction_Mixed(t *testing.T) {
 			{Action: ActionCopy},
 		},
 	}
-	assert.Equal(t, HookAction(-1), item.EffectiveAction())
+	assert.Equal(t, ActionMixed, item.EffectiveAction())
 }
 
 func TestEffectiveAction_NoChildren(t *testing.T) {
