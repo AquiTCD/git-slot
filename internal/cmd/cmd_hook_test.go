@@ -24,18 +24,13 @@ func TestUpdateConfigWithHooks(t *testing.T) {
 	a := &app{repoRoot: repoRoot}
 	var out strings.Builder
 	err := updateConfigWithHooks(a, items, &out, configPath)
-	if err != nil {
-		t.Fatalf("Failed to update config: %v", err)
-	}
+	require.NoError(t, err)
 
 	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("Failed to read config: %v", err)
-	}
+	require.NoError(t, err)
 
 	tomlContent := string(content)
 
-	// Check content
 	expectedFragments := []string{
 		"type = 'link'",
 		"source = '$GSL_REPO_ROOT/.env'",
@@ -46,14 +41,10 @@ func TestUpdateConfigWithHooks(t *testing.T) {
 	}
 
 	for _, frag := range expectedFragments {
-		if !strings.Contains(tomlContent, frag) {
-			t.Errorf("Expected fragment missing from TOML: %s", frag)
-		}
+		assert.Contains(t, tomlContent, frag)
 	}
 
-	if strings.Contains(tomlContent, "ignored.txt") {
-		t.Errorf("ActionNone item should not be in the TOML")
-	}
+	assert.NotContains(t, tomlContent, "ignored.txt")
 }
 
 func TestAggregateItems_BelowThreshold(t *testing.T) {
