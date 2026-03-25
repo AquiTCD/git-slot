@@ -82,6 +82,8 @@ func launchSlotShell(a *app, slotName string) error {
 		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
 	}
 
+	printHintSlotShell()
+
 	slotDef := a.cfg.FindSlot(slotName)
 	var userEnv map[string]string
 	if slotDef != nil {
