@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
@@ -11,6 +13,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var ErrShellNested = errors.New("already inside a slot shell session; exit first, then re-run")
@@ -79,6 +82,8 @@ func launchSlotShell(a *app, slotName string) error {
 		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
 	}
 
+	printHintSlotShell()
+
 	slotDef := a.cfg.FindSlot(slotName)
 	var userEnv map[string]string
 	if slotDef != nil {
@@ -104,12 +109,71 @@ func execShell(dir string, env []string) error {
 }
 
 func execShellDefault(dir string, env []string) error {
+	if err := os.Chdir(dir); err != nil {
+		return fmt.Errorf("slot shell: chdir to %s: %w", dir, err)
+	}
+	env = envWithPWD(env, dir)
+
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "/bin/sh"
 	}
 
+	// When git-slot runs under command substitution (e.g. the gsl wrapper's
+	// result=$(command git-slot set ...)), stdout is a pipe. syscall.Exec would
+	// leave the interactive shell with a non-TTY stdout, so prompts never show
+	// and the shell often exits immediately. Rebind to the controlling terminal.
+	_ = attachStdioToControllingTTY()
+
 	return syscall.Exec(shell, []string{shell}, env)
+}
+
+// envWithPWD drops any inherited PWD and sets PWD to dir so the exec'd shell
+// matches the process working directory after Chdir.
+func envWithPWD(env []string, dir string) []string {
+	pwd := "PWD=" + dir
+	out := make([]string, 0, len(env)+1)
+	for _, e := range env {
+		if strings.HasPrefix(e, "PWD=") {
+			continue
+		}
+		out = append(out, e)
+	}
+	out = append(out, pwd)
+	return out
+}
+
+// attachStdioToControllingTTY redirects stdout/stderr to the controlling tty when
+// they are not terminals. Best-effort: failure is ignored so direct invocations
+// and headless environments keep previous behavior.
+func attachStdioToControllingTTY() error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	needOut := !term.IsTerminal(int(os.Stdout.Fd()))
+	needErr := !term.IsTerminal(int(os.Stderr.Fd()))
+	if !needOut && !needErr {
+		return nil
+	}
+
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer tty.Close()
+
+	tfd := int(tty.Fd())
+	if needOut {
+		if err := syscall.Dup2(tfd, int(os.Stdout.Fd())); err != nil {
+			return err
+		}
+	}
+	if needErr {
+		if err := syscall.Dup2(tfd, int(os.Stderr.Fd())); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func selectSlotInteractive(a *app) (string, error) {

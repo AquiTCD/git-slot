@@ -55,12 +55,7 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 		return launchSlotShell(a, slotName)
 	}
 
-	path, err := a.mgr.GetPath(slotName)
-	if err != nil {
-		return err
-	}
-	_, _ = fmt.Fprintln(out, path)
-	return nil
+	return runGetPath(a.mgr, slotName, out)
 }
 
 func isInsideSlotShell() bool {
@@ -85,6 +80,29 @@ func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 	}
 	_, _ = fmt.Fprintln(out, path)
 	return nil
+}
+
+// runGetPathOrLaunchShell prints the worktree path, or launches a slot shell when
+// launch_shell is set and the slot already has a branch mounted. This unifies
+// `git slot set <slot>` (one argument), TUI selection of an active slot only, and
+// runMount's "same slot inside shell → print path" behaviour.
+func runGetPathOrLaunchShell(a *app, slotName string, noShell bool, out io.Writer) error {
+	if a.cfg.LaunchShell != nil && *a.cfg.LaunchShell && !noShell {
+		if err := checkShellNestingForSet(slotName); err != nil {
+			return err
+		}
+		if isInsideSlotShell() && os.Getenv("GSL_SLOT_NAME") == slotName {
+			return runGetPath(a.mgr, slotName, out)
+		}
+		st, err := a.mgr.Status(slotName)
+		if err != nil {
+			return err
+		}
+		if st.State != slot.SlotEmpty {
+			return launchSlotShell(a, slotName)
+		}
+	}
+	return runGetPath(a.mgr, slotName, out)
 }
 
 func runInteractive(a *app, force, noShell bool, out io.Writer) error {
@@ -131,8 +149,15 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 		return nil
 	}
 
+	return handleInteractiveResult(a, result, force, noShell, out)
+}
+
+// handleInteractiveResult applies TUI selection. When the chosen slot is already
+// active, BranchName is empty (see tui.Model.selectCurrentSlot); launch_shell must
+// still open a slot shell in that case, not only print the path.
+func handleInteractiveResult(a *app, result tui.Result, force, noShell bool, out io.Writer) error {
 	if result.BranchName == "" {
-		return runGetPath(a.mgr, result.SlotName, out)
+		return runGetPathOrLaunchShell(a, result.SlotName, noShell, out)
 	}
 
 	return runMount(a, result.SlotName, result.BranchName, mountOptions{

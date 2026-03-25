@@ -11,7 +11,8 @@ var setCmd = &cobra.Command{
 	Short: "Set a branch into a slot, or print the slot path",
 	Long: `Set a branch into a named slot, or print the slot's worktree path.
 
-With one argument, prints the slot's worktree path.
+With one argument, prints the slot's worktree path (or launches a slot shell when
+launch_shell is enabled and the slot already has a branch mounted — same as TUI).
 With two arguments, mounts the specified branch into the slot.
 Use -c/--create to create a new branch and mount it.`,
 	Args: cobra.RangeArgs(1, 2),
@@ -54,5 +55,5 @@ func runSet(cmd *cobra.Command, args []string) error {
 	if create != "" {
 		return runMount(a, slotName, create, mountOptions{createBranch: true, force: force, noShell: noShell}, out)
 	}
-	return runGetPath(a.mgr, slotName, out)
+	return runGetPathOrLaunchShell(a, slotName, noShell, out)
 }

@@ -179,3 +179,8 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		assert.Contains(t, buf.String(), "/slots/main-work")
 	})
 }
+
+func TestEnvWithPWD(t *testing.T) {
+	got := envWithPWD([]string{"FOO=1", "PWD=/old", "BAR=2"}, "/slots/wood")
+	assert.Equal(t, []string{"FOO=1", "BAR=2", "PWD=/slots/wood"}, got)
+}
