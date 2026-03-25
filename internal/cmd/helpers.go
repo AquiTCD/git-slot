@@ -29,6 +29,10 @@ func checkShellNestingForSet(targetSlot string) error {
 	return ErrShellNested
 }
 
+func wantShell(cfg *config.Config, noShell bool) bool {
+	return cfg.LaunchShell != nil && *cfg.LaunchShell && !noShell
+}
+
 func buildHookEnv(cfg *config.Config, slotName, slotPath, branch, repoRoot, action string) hook.HookEnv {
 	var userEnv map[string]string
 	if def := cfg.FindSlot(slotName); def != nil {
