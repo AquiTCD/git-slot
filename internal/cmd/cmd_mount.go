@@ -58,21 +58,6 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 	return runGetPath(a.mgr, slotName, out)
 }
 
-func isInsideSlotShell() bool {
-	return os.Getenv("GSL_SHELL_SESSION") != ""
-}
-
-func checkShellNestingForSet(targetSlot string) error {
-	if !isInsideSlotShell() {
-		return nil
-	}
-	currentSlot := os.Getenv("GSL_SLOT_NAME")
-	if currentSlot == targetSlot {
-		return nil
-	}
-	return ErrShellNested
-}
-
 func runGetPath(mgr slot.SlotManager, slotName string, out io.Writer) error {
 	path, err := mgr.GetPath(slotName)
 	if err != nil {

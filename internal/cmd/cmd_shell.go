@@ -66,13 +66,6 @@ func runShell(cmd *cobra.Command, args []string) error {
 	return launchSlotShell(a, slotName)
 }
 
-func checkShellNesting() error {
-	if os.Getenv("GSL_SHELL_SESSION") != "" {
-		return ErrShellNested
-	}
-	return nil
-}
-
 func launchSlotShell(a *app, slotName string) error {
 	st, err := a.mgr.Status(slotName)
 	if err != nil {
