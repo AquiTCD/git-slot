@@ -120,7 +120,7 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 	}
 
 	results := m.GetResults()
-	return updateConfigWithHooks(a, results, out, global)
+	return updateConfigWithHooks(a, results, out, configPath)
 }
 
 func aggregateItems(items []tui.HookItem, threshold int) []*tui.HookItem {
@@ -242,12 +242,7 @@ func generateHooksTOML(originalContent string, hooks []config.HookAction) (strin
 	return out.String(), nil
 }
 
-func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global bool) error {
-	configPath, err := resolveConfigPath(a.repoRoot, global)
-	if err != nil {
-		return err
-	}
-
+func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, configPath string) error {
 	var originalContent string
 	if data, err := os.ReadFile(configPath); err == nil {
 		originalContent = string(data)
@@ -279,10 +274,6 @@ func updateConfigWithHooks(a *app, items []tui.HookItem, out io.Writer, global b
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	loc := "project"
-	if global {
-		loc = "global"
-	}
-	_, _ = fmt.Fprintf(out, "Successfully updated %s git-slot.toml while preserving comments! 💎\n", loc)
+	_, _ = fmt.Fprintf(out, "Successfully updated %s while preserving comments! 💎\n", configPath)
 	return nil
 }

@@ -23,7 +23,7 @@ func TestUpdateConfigWithHooks(t *testing.T) {
 
 	a := &app{repoRoot: repoRoot}
 	var out strings.Builder
-	err := updateConfigWithHooks(a, items, &out, false)
+	err := updateConfigWithHooks(a, items, &out, configPath)
 	if err != nil {
 		t.Fatalf("Failed to update config: %v", err)
 	}
