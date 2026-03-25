@@ -265,10 +265,7 @@ func (m HookModel) View() string {
 	}
 
 	var b strings.Builder
-	title := "Setup Post-Mount Hooks"
-	if !m.noColor {
-		title = StyleSelected.Render(title)
-	}
+	title := render(StyleSelected, "Setup Post-Mount Hooks", m.noColor)
 	b.WriteString(title + "\n")
 
 	if len(m.navStack) > 0 {
@@ -282,26 +279,19 @@ func (m HookModel) View() string {
 	for i, item := range m.visible {
 		cursor := "  "
 		if i == m.cursor {
-			if m.noColor {
-				cursor = "> "
-			} else {
-				cursor = StyleCursor.Render("> ")
-			}
+			cursor = render(StyleCursor, "> ", m.noColor)
 		}
 
 		actionStr := m.formatAction(item)
 
 		suffix := ""
 		if item.IsDir && item.ChildCount > 0 && !item.Expanded {
-			suffix = fmt.Sprintf(" (%d items)", item.ChildCount)
-			if !m.noColor {
-				suffix = StyleHash.Render(suffix)
-			}
+			suffix = render(StyleHash, fmt.Sprintf(" (%d items)", item.ChildCount), m.noColor)
 		}
 
 		path := item.Path
-		if !m.noColor && i == m.cursor {
-			path = StyleSelected.Render(path)
+		if i == m.cursor {
+			path = render(StyleSelected, path, m.noColor)
 		}
 
 		fmt.Fprintf(&b, "%s%-10s %s%s\n", cursor, actionStr, path, suffix)
@@ -319,11 +309,7 @@ func (m HookModel) formatAction(item *HookItem) string {
 	if item.IsDir && len(item.Children) > 0 {
 		eff := item.EffectiveAction()
 		if eff == ActionMixed {
-			tag := "[Mixed]"
-			if !m.noColor {
-				tag = StyleStateDirty.Render(tag)
-			}
-			return tag
+			return render(StyleStateDirty, "[Mixed]", m.noColor)
 		}
 		return m.styledAction(eff)
 	}
@@ -332,15 +318,14 @@ func (m HookModel) formatAction(item *HookItem) string {
 
 func (m HookModel) styledAction(a HookAction) string {
 	tag := fmt.Sprintf("[%s]", a.String())
-	if !m.noColor {
-		switch a {
-		case ActionSymlink:
-			tag = StyleSelected.Render(tag)
-		case ActionCopy:
-			tag = StyleBranch.Render(tag)
-		}
+	switch a {
+	case ActionSymlink:
+		return render(StyleSelected, tag, m.noColor)
+	case ActionCopy:
+		return render(StyleBranch, tag, m.noColor)
+	default:
+		return tag
 	}
-	return tag
 }
 
 func (m HookModel) GetResults() []HookItem {

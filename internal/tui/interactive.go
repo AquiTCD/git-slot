@@ -213,10 +213,7 @@ func (m Model) View() string {
 
 func (m Model) viewSlotSelect() string {
 	var b strings.Builder
-	prompt := "Select a slot:"
-	if !m.noColor {
-		prompt = StyleSelected.Render(prompt)
-	}
+	prompt := render(StyleSelected, "Select a slot:", m.noColor)
 	b.WriteString(prompt + "\n\n")
 
 	b.WriteString(m.filterInput.View())
@@ -233,20 +230,14 @@ func (m Model) viewSlotSelect() string {
 func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {
 	cursor := "  "
 	if isSelected {
-		if noColor {
-			cursor = "> "
-		} else {
-			cursor = StyleCursor.Render("> ")
-		}
+		cursor = render(StyleCursor, "> ", noColor)
 	}
 
 	name := s.Name
-	if !noColor {
-		if isSelected {
-			name = StyleSelected.Render(name)
-		} else {
-			name = StyleName.Render(name)
-		}
+	if isSelected {
+		name = render(StyleSelected, name, noColor)
+	} else {
+		name = render(StyleName, name, noColor)
 	}
 
 	icon := ""
@@ -255,18 +246,11 @@ func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {
 	}
 
 	state := s.DisplayState()
-	stateTag := fmt.Sprintf("[%s]", state)
-	if !noColor {
-		stateTag = StateStyle(state).Render(stateTag)
-	}
+	stateTag := render(StateStyle(state), fmt.Sprintf("[%s]", state), noColor)
 
 	line := fmt.Sprintf("%s%s%s  %s", cursor, icon, name, stateTag)
 	if s.State == slot.SlotActive {
-		branch := s.Branch
-		if !noColor {
-			branch = StyleBranch.Render(branch)
-		}
-		line += "  " + branch
+		line += "  " + render(StyleBranch, s.Branch, noColor)
 	}
 	return line
 }
