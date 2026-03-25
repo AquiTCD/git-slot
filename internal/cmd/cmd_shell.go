@@ -152,7 +152,7 @@ func attachStdioToControllingTTY() error {
 	if err != nil {
 		return err
 	}
-	defer tty.Close()
+	defer func() { _ = tty.Close() }()
 
 	tfd := int(tty.Fd())
 	if needOut {
