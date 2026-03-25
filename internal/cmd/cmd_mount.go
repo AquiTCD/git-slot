@@ -7,7 +7,6 @@ import (
 
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type mountOptions struct {
@@ -111,17 +110,11 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 	noColor := tui.IsNoColor()
 	model := tui.NewInteractiveModel(slots, branches, noColor)
 
-	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
-	finalModel, err := p.Run()
+	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {
-		return fmt.Errorf("interactive mode: %w", err)
+		return err
 	}
-
-	m, ok := finalModel.(tui.Model)
-	if !ok {
-		return fmt.Errorf("internal error: unexpected model type %T", finalModel)
-	}
-	if m.Aborted() {
+	if aborted {
 		return nil
 	}
 

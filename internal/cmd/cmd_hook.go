@@ -11,7 +11,6 @@ import (
 	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/AquiTCD/git-slot/internal/git"
 	"github.com/AquiTCD/git-slot/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
@@ -108,14 +107,11 @@ func runHookHelper(a *app, out io.Writer, global bool) error {
 	noColor := tui.IsNoColor()
 	model := tui.NewHookTreeModel(treeItems, expandFn, noColor)
 
-	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
-	finalModel, err := p.Run()
+	m, aborted, err := runTUI[tui.HookModel](model)
 	if err != nil {
-		return fmt.Errorf("hook helper tui: %w", err)
+		return err
 	}
-
-	m := finalModel.(tui.HookModel)
-	if m.Aborted() {
+	if aborted {
 		return nil
 	}
 

@@ -11,7 +11,6 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/slotenv"
 	"github.com/AquiTCD/git-slot/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -193,17 +192,11 @@ func selectSlotInteractive(a *app) (string, error) {
 	noColor := tui.IsNoColor()
 	model := tui.NewInteractiveModel(activeSlots, branches, noColor)
 
-	p := tea.NewProgram(model, tea.WithOutput(os.Stderr))
-	finalModel, err := p.Run()
+	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {
-		return "", fmt.Errorf("interactive mode: %w", err)
+		return "", err
 	}
-
-	m, ok := finalModel.(tui.Model)
-	if !ok {
-		return "", fmt.Errorf("internal error: unexpected model type %T", finalModel)
-	}
-	if m.Aborted() {
+	if aborted {
 		return "", nil
 	}
 
