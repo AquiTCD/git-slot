@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/AquiTCD/git-slot/internal/hook"
-	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/spf13/cobra"
 )
@@ -33,9 +31,7 @@ func init() {
 }
 
 func runClear(a *app, slotName string, force bool, out io.Writer) error {
-	hookRunner := hook.NewRunner(out, os.Stderr)
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-	env := buildHookEnv(a.cfg, slotName, slotPath, "", a.repoRoot, "clear")
+	hookRunner, env := newHookContext(a, slotName, "", "clear", out)
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreClear, env); err != nil {
 		return fmt.Errorf("pre-clear hook: %w", err)

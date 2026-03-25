@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/AquiTCD/git-slot/internal/hook"
-	"github.com/AquiTCD/git-slot/internal/pathutil"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,9 +28,7 @@ func runMount(a *app, slotName, branchName string, opts mountOptions, out io.Wri
 		}
 	}
 
-	hookRunner := hook.NewRunner(out, os.Stderr)
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
-	env := buildHookEnv(a.cfg, slotName, slotPath, branchName, a.repoRoot, "mount")
+	hookRunner, env := newHookContext(a, slotName, branchName, "mount", out)
 
 	if err := hookRunner.Run(a.cfg.Hooks.PreMount, env); err != nil {
 		return fmt.Errorf("pre-mount hook: %w", err)

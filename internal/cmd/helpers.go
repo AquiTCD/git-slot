@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"io"
 	"os"
 
 	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/AquiTCD/git-slot/internal/hook"
+	"github.com/AquiTCD/git-slot/internal/pathutil"
 )
 
 func isInsideSlotShell() bool {
@@ -31,6 +33,13 @@ func checkShellNestingForSet(targetSlot string) error {
 
 func wantShell(cfg *config.Config, noShell bool) bool {
 	return cfg.LaunchShell != nil && *cfg.LaunchShell && !noShell
+}
+
+func newHookContext(a *app, slotName, branch, action string, out io.Writer) (*hook.Runner, hook.HookEnv) {
+	runner := hook.NewRunner(out, os.Stderr)
+	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
+	env := buildHookEnv(a.cfg, slotName, slotPath, branch, a.repoRoot, action)
+	return runner, env
 }
 
 func buildHookEnv(cfg *config.Config, slotName, slotPath, branch, repoRoot, action string) hook.HookEnv {
