@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.4] - 2026-03-25
+
+### Changed
+
+- Extracted generic `runTUI` helper to eliminate repeated Bubbletea boilerplate across interactive commands.
+- Consolidated shell nesting helpers (`isInsideSlotShell`, `checkShellNesting`, `checkShellNestingForSet`) into `helpers.go`.
+- Extracted `wantShell` helper to replace 3 identical `launch_shell` nil-dereference-safe checks.
+- Extracted `newHookContext` helper to centralize hook runner and env setup for mount/clear.
+- Added `render` helper in TUI styles to eliminate repetitive `noColor` branching across list, interactive, and hook views.
+- Replaced `HookAction(-1)` magic number with named `ActionMixed` constant.
+- Passed pre-resolved `configPath` to `updateConfigWithHooks` to eliminate redundant resolution.
+- Removed unused `io.Writer` parameter from `runInit`.
+- Unified all `internal/cmd` test assertions to use testify (`require`/`assert`).
+
+### Fixed
+
+- Wrapped deferred `tty.Close()` to satisfy `errcheck` linter.
+
 ## [0.8.3] - 2026-03-25
 
 ### Added
@@ -260,3 +278,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.8.4]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.4
