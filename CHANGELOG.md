@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.5] - 2026-03-26
+
+### Changed
+
+- Worktree directories now use `{repo}@{slot}` naming scheme (e.g. `git-slot@main-work`) instead of `slots/{slot}`, making the repository name visible in IDE window titles, shell prompts, and directory listings.
+- `SlotPath(slotName string) string` added to `SlotManager` interface; `app` struct no longer stores redundant `basePath`/`repoName` fields.
+
+### Fixed
+
+- `NewManager` now panics immediately when called with an empty `repoName`, surfacing programming errors at construction time.
+- `ParseRemoteURL` parse errors in bootstrap are now wrapped and surfaced instead of silently discarded.
+
 ## [0.8.4] - 2026-03-25
 
 ### Changed
@@ -278,4 +290,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.8.5]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.5
 [0.8.4]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.4
