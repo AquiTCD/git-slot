@@ -240,9 +240,9 @@ func TestRunMount_Success(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -265,9 +265,9 @@ func TestRunMount_CreateBranch(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -288,9 +288,9 @@ func TestRunMount_Force(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -307,9 +307,9 @@ func TestRunMount_Error(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -333,9 +333,9 @@ func TestRunClear_Success(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -354,9 +354,9 @@ func TestRunClear_Force(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -373,9 +373,9 @@ func TestRunClear_Error(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 

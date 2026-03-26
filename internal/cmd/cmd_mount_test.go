@@ -35,9 +35,9 @@ func TestHandleInteractiveResult_ActiveSlotWithLaunchShell(t *testing.T) {
 		},
 	}
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		
+		mgr: mgr,
+		cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 		repoRoot: "/repo",
 	}
 
@@ -55,9 +55,9 @@ func TestHandleInteractiveResult_ActiveSlotWithoutLaunchShell(t *testing.T) {
 		},
 	}
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{LaunchShell: boolPtr(false)},
-		
+		mgr: mgr,
+		cfg: &config.Config{LaunchShell: boolPtr(false)},
+
 		repoRoot: "/repo",
 	}
 
@@ -72,9 +72,9 @@ func TestHandleInteractiveResult_NestedShellDifferentSlot(t *testing.T) {
 	t.Setenv("GSL_SLOT_NAME", "fire")
 
 	a := &app{
-		mgr:      &mockSlotManager{},
-		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		
+		mgr: &mockSlotManager{},
+		cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 		repoRoot: "/repo",
 	}
 
@@ -106,9 +106,9 @@ func TestRunGetPathOrLaunchShell_SameSlotInsideShellPrintsPath(t *testing.T) {
 		},
 	}
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		
+		mgr: mgr,
+		cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 		repoRoot: "/repo",
 	}
 
@@ -139,9 +139,9 @@ func TestRunGetPathOrLaunchShell_EmptySlotPrintsPath(t *testing.T) {
 		},
 	}
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		
+		mgr: mgr,
+		cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 		repoRoot: "/repo",
 	}
 
