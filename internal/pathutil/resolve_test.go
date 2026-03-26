@@ -61,8 +61,13 @@ func TestResolveSlotsBasePath_NoRemoteInfo_WithWtBasePath(t *testing.T) {
 }
 
 func TestResolveSlotPath(t *testing.T) {
-	got := ResolveSlotPath("/base/path/slots", "dev")
-	assert.Equal(t, filepath.Join("/base/path/slots", "dev"), got)
+	got := ResolveSlotPath("/base/github.com/user/repo", "repo", "dev")
+	assert.Equal(t, "/base/github.com/user/repo/repo@dev", got)
+}
+
+func TestResolveSlotPath_RepoWithHyphens(t *testing.T) {
+	got := ResolveSlotPath("/base/github.com/user/my-app", "my-app", "main-work")
+	assert.Equal(t, "/base/github.com/user/my-app/my-app@main-work", got)
 }
 
 func TestExpandHome_TildeSlashPrefix(t *testing.T) {
