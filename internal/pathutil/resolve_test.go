@@ -26,7 +26,7 @@ func TestResolveSlotsBasePath_DefaultGwqStyle(t *testing.T) {
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(home, "worktrees", "github.com", "user", "repo", "slots"), got)
+	assert.Equal(t, filepath.Join(home, "worktrees", "github.com", "user", "repo"), got)
 }
 
 func TestResolveSlotsBasePath_CustomWtBasePath_Absolute(t *testing.T) {
@@ -35,7 +35,7 @@ func TestResolveSlotsBasePath_CustomWtBasePath_Absolute(t *testing.T) {
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, "/opt/worktrees/gitlab.com/team/project/slots", got)
+	assert.Equal(t, "/opt/worktrees/gitlab.com/team/project", got)
 }
 
 func TestResolveSlotsBasePath_CustomWtBasePath_Tilde(t *testing.T) {
@@ -45,7 +45,7 @@ func TestResolveSlotsBasePath_CustomWtBasePath_Tilde(t *testing.T) {
 
 	got, err := ResolveSlotsBasePath(cfg, remote)
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(home, "custom-trees", "github.com", "org", "app", "slots"), got)
+	assert.Equal(t, filepath.Join(home, "custom-trees", "github.com", "org", "app"), got)
 }
 
 func TestResolveSlotsBasePath_NoRemoteInfo(t *testing.T) {
