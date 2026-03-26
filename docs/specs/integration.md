@@ -20,7 +20,7 @@ Git Slot は gwq のディレクトリ規約と共存し、フック機構を通
 
 | ID | ストーリー | 受け入れ条件 |
 |----|-----------|-------------|
-| AC-INT-001 | US-INT-001 | スロットのパスが gwq の worktree 領域内の `slots/` 配下に作成される |
+| AC-INT-001 | US-INT-001 | スロットのパスが gwq の worktree 領域内に `{repo}@{slot}` 形式で作成される |
 | AC-INT-002 | US-INT-001 | gwq の通常 worktree（`slots/` 外）に干渉しない |
 | AC-INT-003 | US-INT-002 | `hooks.post_load` に指定したスクリプトが Load 後に実行される |
 | AC-INT-004 | US-INT-002 | `hooks.pre_clear` に指定したスクリプトが Clear 前に実行される |
@@ -38,19 +38,20 @@ Git Slot は gwq のディレクトリ規約と共存し、フック機構を通
 
 #### ディレクトリ構造の共存
 
-gwq はデフォルトで `~/worktrees/{host}/{owner}/{repo}/{branch}` に worktree を配置する（`worktree.basedir` + `naming.template`）。git-slot はこの同じ階層内に `slots/` ディレクトリを作成して共存する。
+gwq はデフォルトで `~/worktrees/{host}/{owner}/{repo}/{branch}` に worktree を配置する（`worktree.basedir` + `naming.template`）。git-slot は同じ `{repo}/` 配下に `{repo}@{slot}` 形式でディレクトリを作成して共存する。
 
 ```text
 ~/worktrees/github.com/user/repo/     (gwq の worktree 領域)
-├── slots/                             ← git-slot 専用
-│   ├── <slot-A>/
-│   ├── <slot-B>/
-│   └── <slot-C>/
+├── repo@slot-A/                       ← git-slot 専用（{repo}@{slot} 形式）
+├── repo@slot-B/
+├── repo@slot-C/
 ├── feature-auth/                      ← gwq 通常 worktree
 └── bugfix-login/                      ← gwq 通常 worktree
 ```
 
-git-slot は `slots/` サブディレクトリのみを管理し、その外のディレクトリには一切触れない。gwq が `slots/` ディレクトリを作成・操作することもない。
+git-slot の worktree は `{repo}@{slot}` 形式で命名され、gwq の worktree と明確に区別できる。
+`@` はリポジトリ名（`[a-zA-Z0-9._-]`）・スロット名（`[a-zA-Z0-9_-]`）どちらにも使用されない文字であるため、境界が一意に定まる。
+git-slot は `{repo}@` プレフィックスを持つディレクトリのみを管理し、それ以外には一切触れない。
 
 #### ブランチ重複検出の範囲
 
@@ -75,7 +76,7 @@ post_clear = ".git-slot/hooks/post-clear.sh"
 | 環境変数 | 説明 | 例 |
 |----------|------|-----|
 | `GSL_SLOT_NAME` | スロット名 | `main-work` |
-| `GSL_SLOT_PATH` | スロットの絶対パス | `/home/user/src/.../slots/main-work` |
+| `GSL_SLOT_PATH` | スロットの絶対パス | `/home/user/src/.../repo@main-work` |
 | `GSL_BRANCH` | ブランチ名 | `feature/nice-ui` |
 | `GSL_REPO_ROOT` | ベースリポジトリのルート | `/home/user/src/.../repo` |
 | `GSL_ACTION` | 実行中のアクション | `load` / `clear` |
