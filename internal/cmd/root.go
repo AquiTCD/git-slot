@@ -87,7 +87,11 @@ func bootstrap() (*app, error) {
 	var remote *git.RemoteInfo
 	resolver := git.NewExecRemoteURLResolver(repoRoot)
 	if rawURL, err := resolver.RemoteURL("origin"); err == nil {
-		remote, _ = git.ParseRemoteURL(rawURL)
+		if parsed, parseErr := git.ParseRemoteURL(rawURL); parseErr == nil {
+			remote = parsed
+		} else {
+			return nil, fmt.Errorf("origin remote URL %q could not be parsed: %w", rawURL, parseErr)
+		}
 	}
 
 	var repoName string

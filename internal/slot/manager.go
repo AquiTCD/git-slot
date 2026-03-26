@@ -285,7 +285,7 @@ func (m *Manager) resolveSlot(name string) (*Slot, error) {
 }
 
 // worktreeLabel returns a human-readable label for a worktree path.
-// Slot paths under basePath are returned as the slot name; others as the full path.
+// Slot paths under basePath are returned as "{repo}@{slot}"; others as the full path.
 func (m *Manager) worktreeLabel(wtPath string) string {
 	if strings.HasPrefix(wtPath, m.basePath) {
 		rel, err := filepath.Rel(m.basePath, wtPath)

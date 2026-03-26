@@ -70,6 +70,13 @@ func TestResolveSlotPath_RepoWithHyphens(t *testing.T) {
 	assert.Equal(t, "/base/github.com/user/my-app/my-app@main-work", got)
 }
 
+func TestResolveSlotPath_EmptyRepoName(t *testing.T) {
+	// Documents degenerate behavior: empty repoName produces a broken path.
+	// In production this is prevented by NewManager's panic guard.
+	got := ResolveSlotPath("/base/github.com/user/repo", "", "dev")
+	assert.Equal(t, "/base/github.com/user/repo/@dev", got)
+}
+
 func TestExpandHome_TildeSlashPrefix(t *testing.T) {
 	home := homeDir(t)
 	got, err := ExpandHome("~/foo")
