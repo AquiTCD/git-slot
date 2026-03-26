@@ -12,6 +12,7 @@ import (
 type SlotManager interface {
 	List() ([]Slot, error)
 	GetPath(slotName string) (string, error)
+	SlotPath(slotName string) string
 	Mount(slotName, branchName string, opts MountOptions) error
 	Clear(slotName string, opts ClearOptions) error
 	Status(slotName string) (*SlotStatus, error)
@@ -28,7 +29,14 @@ type Manager struct {
 }
 
 func NewManager(cfg *config.Config, basePath, repoName string, wt git.Worktree) *Manager {
+	if repoName == "" {
+		panic("git-slot: NewManager called with empty repoName")
+	}
 	return &Manager{cfg: cfg, basePath: basePath, repoName: repoName, wt: wt}
+}
+
+func (m *Manager) SlotPath(slotName string) string {
+	return pathutil.ResolveSlotPath(m.basePath, m.repoName, slotName)
 }
 
 func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) error {

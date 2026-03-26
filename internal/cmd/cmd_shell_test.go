@@ -60,7 +60,7 @@ func TestRunMount_GetPathError(t *testing.T) {
 		a := &app{
 			mgr:      mgr,
 			cfg:      &config.Config{LaunchShell: nil},
-			basePath: "/slots",
+			
 			repoRoot: "/repo",
 		}
 
@@ -102,7 +102,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		a := &app{
 			mgr:      mgr,
 			cfg:      &config.Config{LaunchShell: boolPtr(true), Slots: []config.SlotDefinition{{Name: "work"}}},
-			basePath: "/slots",
+			
 			repoRoot: "/repo",
 		}
 
@@ -124,7 +124,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		a := &app{
 			mgr:      mgr,
 			cfg:      &config.Config{LaunchShell: boolPtr(true)},
-			basePath: "/slots",
+			
 			repoRoot: "/repo",
 		}
 
@@ -144,7 +144,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		a := &app{
 			mgr:      mgr,
 			cfg:      &config.Config{LaunchShell: boolPtr(true)},
-			basePath: "/slots",
+			
 			repoRoot: "/repo",
 		}
 
@@ -168,7 +168,7 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		a := &app{
 			mgr:      mgr,
 			cfg:      &config.Config{LaunchShell: boolPtr(true)},
-			basePath: "/slots",
+			
 			repoRoot: "/repo",
 		}
 

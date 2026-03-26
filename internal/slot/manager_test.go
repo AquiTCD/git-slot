@@ -72,6 +72,16 @@ func (m *mockWorktree) ListBranches() ([]string, error) {
 
 var _ git.Worktree = (*mockWorktree)(nil)
 
+// --- NewManager tests ---
+
+func TestNewManager_EmptyRepoName_Panics(t *testing.T) {
+	cfg := &config.Config{}
+	mock := &mockWorktree{}
+	assert.Panics(t, func() {
+		NewManager(cfg, "/base", "", mock)
+	})
+}
+
 // --- List tests ---
 
 func TestList_AllEmpty(t *testing.T) {

@@ -37,7 +37,7 @@ func TestHandleInteractiveResult_ActiveSlotWithLaunchShell(t *testing.T) {
 	a := &app{
 		mgr:      mgr,
 		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		basePath: "/slots",
+		
 		repoRoot: "/repo",
 	}
 
@@ -57,7 +57,7 @@ func TestHandleInteractiveResult_ActiveSlotWithoutLaunchShell(t *testing.T) {
 	a := &app{
 		mgr:      mgr,
 		cfg:      &config.Config{LaunchShell: boolPtr(false)},
-		basePath: "/slots",
+		
 		repoRoot: "/repo",
 	}
 
@@ -74,7 +74,7 @@ func TestHandleInteractiveResult_NestedShellDifferentSlot(t *testing.T) {
 	a := &app{
 		mgr:      &mockSlotManager{},
 		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		basePath: "/slots",
+		
 		repoRoot: "/repo",
 	}
 
@@ -108,7 +108,7 @@ func TestRunGetPathOrLaunchShell_SameSlotInsideShellPrintsPath(t *testing.T) {
 	a := &app{
 		mgr:      mgr,
 		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		basePath: "/slots",
+		
 		repoRoot: "/repo",
 	}
 
@@ -141,7 +141,7 @@ func TestRunGetPathOrLaunchShell_EmptySlotPrintsPath(t *testing.T) {
 	a := &app{
 		mgr:      mgr,
 		cfg:      &config.Config{LaunchShell: boolPtr(true)},
-		basePath: "/slots",
+		
 		repoRoot: "/repo",
 	}
 

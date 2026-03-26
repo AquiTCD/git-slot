@@ -73,8 +73,6 @@ func run(cmd *cobra.Command, _ []string) error {
 type app struct {
 	mgr      slot.SlotManager
 	cfg      *config.Config
-	basePath string
-	repoName string
 	repoRoot string
 	wt       git.Worktree
 }
@@ -111,8 +109,6 @@ func bootstrap() (*app, error) {
 	return &app{
 		mgr:      slot.NewManager(cfg, basePath, repoName, wt),
 		cfg:      cfg,
-		basePath: basePath,
-		repoName: repoName,
 		repoRoot: repoRoot,
 		wt:       wt,
 	}, nil
