@@ -7,7 +7,6 @@ import (
 
 	"github.com/AquiTCD/git-slot/internal/config"
 	"github.com/AquiTCD/git-slot/internal/hook"
-	"github.com/AquiTCD/git-slot/internal/pathutil"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -39,7 +38,7 @@ func wantShell(cfg *config.Config, noShell bool) bool {
 
 func newHookContext(a *app, slotName, branch, action string, out io.Writer) (*hook.Runner, hook.HookEnv) {
 	runner := hook.NewRunner(out, os.Stderr)
-	slotPath := pathutil.ResolveSlotPath(a.basePath, slotName)
+	slotPath := a.mgr.SlotPath(slotName)
 	env := buildHookEnv(a.cfg, slotName, slotPath, branch, a.repoRoot, action)
 	return runner, env
 }

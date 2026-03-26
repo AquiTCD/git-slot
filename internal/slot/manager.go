@@ -12,6 +12,7 @@ import (
 type SlotManager interface {
 	List() ([]Slot, error)
 	GetPath(slotName string) (string, error)
+	SlotPath(slotName string) string
 	Mount(slotName, branchName string, opts MountOptions) error
 	Clear(slotName string, opts ClearOptions) error
 	Status(slotName string) (*SlotStatus, error)
@@ -21,13 +22,21 @@ type SlotManager interface {
 type Manager struct {
 	cfg       *config.Config
 	basePath  string
+	repoName  string
 	wt        git.Worktree
 	worktrees []git.WorktreeInfo
 	fetched   bool
 }
 
-func NewManager(cfg *config.Config, basePath string, wt git.Worktree) *Manager {
-	return &Manager{cfg: cfg, basePath: basePath, wt: wt}
+func NewManager(cfg *config.Config, basePath, repoName string, wt git.Worktree) *Manager {
+	if repoName == "" {
+		panic("git-slot: NewManager called with empty repoName")
+	}
+	return &Manager{cfg: cfg, basePath: basePath, repoName: repoName, wt: wt}
+}
+
+func (m *Manager) SlotPath(slotName string) string {
+	return pathutil.ResolveSlotPath(m.basePath, m.repoName, slotName)
 }
 
 func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) error {
@@ -80,7 +89,7 @@ func (m *Manager) List() ([]Slot, error) {
 		s := Slot{
 			Name: def.Name,
 			Icon: def.Icon,
-			Path: pathutil.ResolveSlotPath(m.basePath, def.Name),
+			Path: pathutil.ResolveSlotPath(m.basePath, m.repoName, def.Name),
 		}
 		if err := m.populateSlot(&s, wtByPath); err != nil {
 			return nil, err
@@ -266,7 +275,7 @@ func (m *Manager) resolveSlot(name string) (*Slot, error) {
 	s := &Slot{
 		Name: name,
 		Icon: def.Icon,
-		Path: pathutil.ResolveSlotPath(m.basePath, name),
+		Path: pathutil.ResolveSlotPath(m.basePath, m.repoName, name),
 	}
 	if err := m.populateSlot(s, wtByPath); err != nil {
 		return nil, err
@@ -276,7 +285,7 @@ func (m *Manager) resolveSlot(name string) (*Slot, error) {
 }
 
 // worktreeLabel returns a human-readable label for a worktree path.
-// Slot paths under basePath are returned as the slot name; others as the full path.
+// Slot paths under basePath are returned as "{repo}@{slot}"; others as the full path.
 func (m *Manager) worktreeLabel(wtPath string) string {
 	if strings.HasPrefix(wtPath, m.basePath) {
 		rel, err := filepath.Rel(m.basePath, wtPath)

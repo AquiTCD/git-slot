@@ -73,7 +73,6 @@ func run(cmd *cobra.Command, _ []string) error {
 type app struct {
 	mgr      slot.SlotManager
 	cfg      *config.Config
-	basePath string
 	repoRoot string
 	wt       git.Worktree
 }
@@ -88,7 +87,16 @@ func bootstrap() (*app, error) {
 	var remote *git.RemoteInfo
 	resolver := git.NewExecRemoteURLResolver(repoRoot)
 	if rawURL, err := resolver.RemoteURL("origin"); err == nil {
-		remote, _ = git.ParseRemoteURL(rawURL)
+		if parsed, parseErr := git.ParseRemoteURL(rawURL); parseErr == nil {
+			remote = parsed
+		} else {
+			return nil, fmt.Errorf("origin remote URL %q could not be parsed: %w", rawURL, parseErr)
+		}
+	}
+
+	var repoName string
+	if remote != nil {
+		repoName = remote.Repo
 	}
 
 	cfg, err := config.LoadConfig(config.LoadOptions{RepoRoot: repoRoot})
@@ -103,9 +111,8 @@ func bootstrap() (*app, error) {
 
 	wt := git.NewExecWorktree(repoRoot)
 	return &app{
-		mgr:      slot.NewManager(cfg, basePath, wt),
+		mgr:      slot.NewManager(cfg, basePath, repoName, wt),
 		cfg:      cfg,
-		basePath: basePath,
 		repoRoot: repoRoot,
 		wt:       wt,
 	}, nil

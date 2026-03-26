@@ -29,11 +29,11 @@ func ResolveSlotsBasePath(cfg *config.Config, remote *git.RemoteInfo) (string, e
 		return "", err
 	}
 
-	return filepath.Join(expanded, remote.Host, remote.Owner, remote.Repo, "slots"), nil
+	return filepath.Join(expanded, remote.Host, remote.Owner, remote.Repo), nil
 }
 
-func ResolveSlotPath(basePath, slotName string) string {
-	return filepath.Join(basePath, slotName)
+func ResolveSlotPath(basePath, repoName, slotName string) string {
+	return filepath.Join(basePath, repoName+"@"+slotName)
 }
 
 func ExpandHome(path string) (string, error) {

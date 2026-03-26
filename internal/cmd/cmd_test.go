@@ -16,6 +16,7 @@ import (
 type mockSlotManager struct {
 	listFn      func() ([]slot.Slot, error)
 	getPathFn   func(string) (string, error)
+	slotPathFn  func(string) string
 	mountFn     func(string, string, slot.MountOptions) error
 	clearFn     func(string, slot.ClearOptions) error
 	statusFn    func(string) (*slot.SlotStatus, error)
@@ -34,6 +35,13 @@ func (m *mockSlotManager) GetPath(name string) (string, error) {
 		return m.getPathFn(name)
 	}
 	return "", nil
+}
+
+func (m *mockSlotManager) SlotPath(name string) string {
+	if m.slotPathFn != nil {
+		return m.slotPathFn(name)
+	}
+	return ""
 }
 
 func (m *mockSlotManager) Mount(slotName, branchName string, opts slot.MountOptions) error {
@@ -232,9 +240,9 @@ func TestRunMount_Success(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -257,9 +265,9 @@ func TestRunMount_CreateBranch(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -280,9 +288,9 @@ func TestRunMount_Force(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -299,9 +307,9 @@ func TestRunMount_Error(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -325,9 +333,9 @@ func TestRunClear_Success(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -346,9 +354,9 @@ func TestRunClear_Force(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 
@@ -365,9 +373,9 @@ func TestRunClear_Error(t *testing.T) {
 	}
 
 	a := &app{
-		mgr:      mgr,
-		cfg:      &config.Config{},
-		basePath: "/slots",
+		mgr: mgr,
+		cfg: &config.Config{},
+
 		repoRoot: "/repo",
 	}
 

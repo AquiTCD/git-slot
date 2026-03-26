@@ -58,9 +58,9 @@ func TestRunMount_GetPathError(t *testing.T) {
 			getPathFn: func(_ string) (string, error) { return "", errors.New("worktree not found") },
 		}
 		a := &app{
-			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: nil},
-			basePath: "/slots",
+			mgr: mgr,
+			cfg: &config.Config{LaunchShell: nil},
+
 			repoRoot: "/repo",
 		}
 
@@ -100,9 +100,9 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		}
 
 		a := &app{
-			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: boolPtr(true), Slots: []config.SlotDefinition{{Name: "work"}}},
-			basePath: "/slots",
+			mgr: mgr,
+			cfg: &config.Config{LaunchShell: boolPtr(true), Slots: []config.SlotDefinition{{Name: "work"}}},
+
 			repoRoot: "/repo",
 		}
 
@@ -122,9 +122,9 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		}
 
 		a := &app{
-			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: boolPtr(true)},
-			basePath: "/slots",
+			mgr: mgr,
+			cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 			repoRoot: "/repo",
 		}
 
@@ -142,9 +142,9 @@ func TestRunMount_LaunchShell(t *testing.T) {
 
 		mgr := &mockSlotManager{}
 		a := &app{
-			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: boolPtr(true)},
-			basePath: "/slots",
+			mgr: mgr,
+			cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 			repoRoot: "/repo",
 		}
 
@@ -166,9 +166,9 @@ func TestRunMount_LaunchShell(t *testing.T) {
 		}
 
 		a := &app{
-			mgr:      mgr,
-			cfg:      &config.Config{LaunchShell: boolPtr(true)},
-			basePath: "/slots",
+			mgr: mgr,
+			cfg: &config.Config{LaunchShell: boolPtr(true)},
+
 			repoRoot: "/repo",
 		}
 

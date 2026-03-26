@@ -72,6 +72,16 @@ func (m *mockWorktree) ListBranches() ([]string, error) {
 
 var _ git.Worktree = (*mockWorktree)(nil)
 
+// --- NewManager tests ---
+
+func TestNewManager_EmptyRepoName_Panics(t *testing.T) {
+	cfg := &config.Config{}
+	mock := &mockWorktree{}
+	assert.Panics(t, func() {
+		NewManager(cfg, "/base", "", mock)
+	})
+}
+
 // --- List tests ---
 
 func TestList_AllEmpty(t *testing.T) {
@@ -82,7 +92,7 @@ func TestList_AllEmpty(t *testing.T) {
 		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -98,12 +108,12 @@ func TestList_MixedState(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -122,14 +132,14 @@ func TestList_WithDirtySlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "main", HeadHash: "def5678"},
+				{Path: "/base/repo@work", Branch: "main", HeadHash: "def5678"},
 			}, nil
 		},
 
 		dirtyCountFn: func(_ string) (int, error) { return 1, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -145,7 +155,7 @@ func TestList_WorktreeListError(t *testing.T) {
 		listFn: func() ([]git.WorktreeInfo, error) { return nil, errors.New("git failed") },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	_, err := mgr.List()
 
 	require.Error(t, err)
@@ -160,7 +170,7 @@ func TestList_OrderMatchesConfig(t *testing.T) {
 		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -179,16 +189,16 @@ func TestGetPath_ActiveSlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "main"},
+				{Path: "/base/repo@work", Branch: "main"},
 			}, nil
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	p, err := mgr.GetPath("work")
 
 	require.NoError(t, err)
-	assert.Equal(t, "/base/slots/work", p)
+	assert.Equal(t, "/base/repo@work", p)
 }
 
 func TestGetPath_EmptySlot(t *testing.T) {
@@ -199,7 +209,7 @@ func TestGetPath_EmptySlot(t *testing.T) {
 		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	_, err := mgr.GetPath("work")
 
 	require.Error(t, err)
@@ -212,7 +222,7 @@ func TestGetPath_UnknownSlot(t *testing.T) {
 	}
 	mock := &mockWorktree{}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	_, err := mgr.GetPath("nope")
 
 	require.Error(t, err)
@@ -236,11 +246,11 @@ func TestMount_ExistingBranch_EmptySlot(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err)
-	assert.Equal(t, "/base/slots/work", addPath)
+	assert.Equal(t, "/base/repo@work", addPath)
 	assert.Equal(t, "feature/x", addBranch)
 }
 
@@ -253,7 +263,7 @@ func TestMount_ExistingBranch_ActiveSlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "old-branch"},
+				{Path: "/base/repo@work", Branch: "old-branch"},
 			}, nil
 		},
 
@@ -265,7 +275,7 @@ func TestMount_ExistingBranch_ActiveSlot(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err)
@@ -281,7 +291,7 @@ func TestMount_SameBranch_Noop(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x"},
+				{Path: "/base/repo@work", Branch: "feature/x"},
 			}, nil
 		},
 
@@ -295,7 +305,7 @@ func TestMount_SameBranch_Noop(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err)
@@ -310,7 +320,7 @@ func TestMount_DirtySameBranch_ReturnsNil(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x"},
+				{Path: "/base/repo@work", Branch: "feature/x"},
 			}, nil
 		},
 
@@ -325,7 +335,7 @@ func TestMount_DirtySameBranch_ReturnsNil(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.NoError(t, err, "dirty slot already on requested branch should be a no-op")
@@ -341,7 +351,7 @@ func TestMount_CreateBranch_ActiveSlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "old-branch"},
+				{Path: "/base/repo@work", Branch: "old-branch"},
 			}, nil
 		},
 
@@ -353,7 +363,7 @@ func TestMount_CreateBranch_ActiveSlot(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/new", MountOptions{CreateBranch: true})
 
 	require.NoError(t, err)
@@ -368,14 +378,14 @@ func TestMount_ExistingBranch_DirtySlot_NoForce(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "old-branch"},
+				{Path: "/base/repo@work", Branch: "old-branch"},
 			}, nil
 		},
 
 		dirtyCountFn: func(_ string) (int, error) { return 1, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
@@ -390,7 +400,7 @@ func TestMount_ExistingBranch_DirtySlot_Force(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "old-branch"},
+				{Path: "/base/repo@work", Branch: "old-branch"},
 			}, nil
 		},
 
@@ -402,7 +412,7 @@ func TestMount_ExistingBranch_DirtySlot_Force(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{Force: true})
 
 	require.NoError(t, err)
@@ -424,11 +434,11 @@ func TestMount_CreateBranch_EmptySlot(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/new", MountOptions{CreateBranch: true})
 
 	require.NoError(t, err)
-	assert.Equal(t, "/base/slots/work", newBranchPath)
+	assert.Equal(t, "/base/repo@work", newBranchPath)
 	assert.Equal(t, "feature/new", newBranchName)
 }
 
@@ -441,7 +451,7 @@ func TestMount_CreateBranch_AlreadyExists(t *testing.T) {
 		branchExistsFn: func(_ string) (bool, error) { return true, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/new", MountOptions{CreateBranch: true})
 
 	require.Error(t, err)
@@ -455,19 +465,19 @@ func TestMount_BranchInUse_OtherSlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/hotfix", Branch: "feature/x"},
+				{Path: "/base/repo@hotfix", Branch: "feature/x"},
 			}, nil
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrBranchInUse))
 	var brErr *BranchError
 	require.True(t, errors.As(err, &brErr))
-	assert.Equal(t, "hotfix", brErr.UsedBy)
+	assert.Equal(t, "repo@hotfix", brErr.UsedBy)
 }
 
 func TestMount_BranchInUse_GwqWorktree(t *testing.T) {
@@ -482,7 +492,7 @@ func TestMount_BranchInUse_GwqWorktree(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
@@ -501,7 +511,7 @@ func TestMount_BranchNotFound(t *testing.T) {
 		branchExistsFn: func(_ string) (bool, error) { return false, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "nonexistent", MountOptions{})
 
 	require.Error(t, err)
@@ -514,7 +524,7 @@ func TestMount_UnknownSlot(t *testing.T) {
 	}
 	mock := &mockWorktree{}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("nope", "main", MountOptions{})
 
 	require.Error(t, err)
@@ -533,7 +543,7 @@ func TestMount_WorktreeAddFails(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Mount("work", "feature/x", MountOptions{})
 
 	require.Error(t, err)
@@ -551,7 +561,7 @@ func TestClear_ActiveSlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "main"},
+				{Path: "/base/repo@work", Branch: "main"},
 			}, nil
 		},
 
@@ -562,12 +572,12 @@ func TestClear_ActiveSlot(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Clear("work", ClearOptions{})
 
 	require.NoError(t, err)
 	assert.True(t, removeCalled)
-	assert.Equal(t, "/base/slots/work", removePath)
+	assert.Equal(t, "/base/repo@work", removePath)
 }
 
 func TestClear_EmptySlot(t *testing.T) {
@@ -578,7 +588,7 @@ func TestClear_EmptySlot(t *testing.T) {
 		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Clear("work", ClearOptions{})
 
 	require.Error(t, err)
@@ -592,14 +602,14 @@ func TestClear_DirtySlot_NoForce(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "main"},
+				{Path: "/base/repo@work", Branch: "main"},
 			}, nil
 		},
 
 		dirtyCountFn: func(_ string) (int, error) { return 1, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Clear("work", ClearOptions{})
 
 	require.Error(t, err)
@@ -614,7 +624,7 @@ func TestClear_DirtySlot_Force(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "main"},
+				{Path: "/base/repo@work", Branch: "main"},
 			}, nil
 		},
 
@@ -625,7 +635,7 @@ func TestClear_DirtySlot_Force(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Clear("work", ClearOptions{Force: true})
 
 	require.NoError(t, err)
@@ -638,7 +648,7 @@ func TestClear_UnknownSlot(t *testing.T) {
 	}
 	mock := &mockWorktree{}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Clear("nope", ClearOptions{})
 
 	require.Error(t, err)
@@ -652,7 +662,7 @@ func TestClear_RemoveFails(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "main"},
+				{Path: "/base/repo@work", Branch: "main"},
 			}, nil
 		},
 
@@ -661,7 +671,7 @@ func TestClear_RemoveFails(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	err := mgr.Clear("work", ClearOptions{})
 
 	require.Error(t, err)
@@ -677,7 +687,7 @@ func TestStatus_ActiveSlot(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
 
@@ -688,7 +698,7 @@ func TestStatus_ActiveSlot(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	st, err := mgr.Status("work")
 
 	require.NoError(t, err)
@@ -707,7 +717,7 @@ func TestStatus_EmptySlot(t *testing.T) {
 		listFn: func() ([]git.WorktreeInfo, error) { return nil, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	st, err := mgr.Status("work")
 
 	require.NoError(t, err)
@@ -722,7 +732,7 @@ func TestStatus_UnknownSlot(t *testing.T) {
 	}
 	mock := &mockWorktree{}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	_, err := mgr.Status("nope")
 
 	require.Error(t, err)
@@ -739,7 +749,7 @@ func TestList_RichFields_DirtyAndAhead(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
 
@@ -747,7 +757,7 @@ func TestList_RichFields_DirtyAndAhead(t *testing.T) {
 		aheadCountFn: func(_ string) (int, error) { return 2, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -765,14 +775,14 @@ func TestList_RichFields_NoUpstream(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
 		dirtyCountFn: func(_ string) (int, error) { return 0, nil },
 		aheadCountFn: func(_ string) (int, error) { return 0, errors.New("no upstream") },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -800,7 +810,7 @@ func TestList_RichFields_EmptySlot_NoGitCalls(t *testing.T) {
 		},
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	slots, err := mgr.List()
 
 	require.NoError(t, err)
@@ -818,13 +828,13 @@ func TestList_RichFields_DirtyCountError(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
 		dirtyCountFn: func(_ string) (int, error) { return 0, errors.New("git status failed") },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	_, err := mgr.List()
 
 	require.Error(t, err)
@@ -838,7 +848,7 @@ func TestStatusAll(t *testing.T) {
 	mock := &mockWorktree{
 		listFn: func() ([]git.WorktreeInfo, error) {
 			return []git.WorktreeInfo{
-				{Path: "/base/slots/work", Branch: "feature/x", HeadHash: "abc1234"},
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
 			}, nil
 		},
 
@@ -846,7 +856,7 @@ func TestStatusAll(t *testing.T) {
 		statusShortFn:   func(path string) ([]string, error) { return nil, nil },
 	}
 
-	mgr := NewManager(cfg, "/base/slots", mock)
+	mgr := NewManager(cfg, "/base", "repo", mock)
 	statuses, err := mgr.StatusAll()
 
 	require.NoError(t, err)
