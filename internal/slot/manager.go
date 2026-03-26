@@ -21,13 +21,14 @@ type SlotManager interface {
 type Manager struct {
 	cfg       *config.Config
 	basePath  string
+	repoName  string
 	wt        git.Worktree
 	worktrees []git.WorktreeInfo
 	fetched   bool
 }
 
-func NewManager(cfg *config.Config, basePath string, wt git.Worktree) *Manager {
-	return &Manager{cfg: cfg, basePath: basePath, wt: wt}
+func NewManager(cfg *config.Config, basePath, repoName string, wt git.Worktree) *Manager {
+	return &Manager{cfg: cfg, basePath: basePath, repoName: repoName, wt: wt}
 }
 
 func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) error {
@@ -80,7 +81,7 @@ func (m *Manager) List() ([]Slot, error) {
 		s := Slot{
 			Name: def.Name,
 			Icon: def.Icon,
-			Path: pathutil.ResolveSlotPath(m.basePath, def.Name),
+			Path: pathutil.ResolveSlotPath(m.basePath, m.repoName, def.Name),
 		}
 		if err := m.populateSlot(&s, wtByPath); err != nil {
 			return nil, err
@@ -266,7 +267,7 @@ func (m *Manager) resolveSlot(name string) (*Slot, error) {
 	s := &Slot{
 		Name: name,
 		Icon: def.Icon,
-		Path: pathutil.ResolveSlotPath(m.basePath, name),
+		Path: pathutil.ResolveSlotPath(m.basePath, m.repoName, name),
 	}
 	if err := m.populateSlot(s, wtByPath); err != nil {
 		return nil, err
