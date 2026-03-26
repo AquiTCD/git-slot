@@ -74,6 +74,7 @@ type app struct {
 	mgr      slot.SlotManager
 	cfg      *config.Config
 	basePath string
+	repoName string
 	repoRoot string
 	wt       git.Worktree
 }
@@ -91,6 +92,11 @@ func bootstrap() (*app, error) {
 		remote, _ = git.ParseRemoteURL(rawURL)
 	}
 
+	var repoName string
+	if remote != nil {
+		repoName = remote.Repo
+	}
+
 	cfg, err := config.LoadConfig(config.LoadOptions{RepoRoot: repoRoot})
 	if err != nil {
 		return nil, err
@@ -103,9 +109,10 @@ func bootstrap() (*app, error) {
 
 	wt := git.NewExecWorktree(repoRoot)
 	return &app{
-		mgr:      slot.NewManager(cfg, basePath, wt),
+		mgr:      slot.NewManager(cfg, basePath, repoName, wt),
 		cfg:      cfg,
 		basePath: basePath,
+		repoName: repoName,
 		repoRoot: repoRoot,
 		wt:       wt,
 	}, nil
