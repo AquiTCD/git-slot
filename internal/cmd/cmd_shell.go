@@ -12,6 +12,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slotenv"
 	"github.com/AquiTCD/git-slot/internal/tui"
 	"github.com/spf13/cobra"
+	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
 
@@ -156,12 +157,12 @@ func attachStdioToControllingTTY() error {
 
 	tfd := int(tty.Fd())
 	if needOut {
-		if err := syscall.Dup2(tfd, int(os.Stdout.Fd())); err != nil {
+		if err := unix.Dup2(tfd, int(os.Stdout.Fd())); err != nil {
 			return err
 		}
 	}
 	if needErr {
-		if err := syscall.Dup2(tfd, int(os.Stderr.Fd())); err != nil {
+		if err := unix.Dup2(tfd, int(os.Stderr.Fd())); err != nil {
 			return err
 		}
 	}
