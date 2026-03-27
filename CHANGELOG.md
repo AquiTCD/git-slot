@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.6] - 2026-03-27
+
+### Fixed
+
+- GoReleaser builds failed on `linux_arm64`: `syscall.Dup2` is undefined on that platform. Slot shell TTY reattach now uses `golang.org/x/sys/unix.Dup2`.
+
 ## [0.8.5] - 2026-03-26
 
 ### Changed
@@ -290,5 +296,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.8.6]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.6
 [0.8.5]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.5
 [0.8.4]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.4
