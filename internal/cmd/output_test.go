@@ -347,3 +347,46 @@ func TestWriteJSON_PrettyPrinted(t *testing.T) {
 	assert.Contains(t, output, "  ")
 	assert.Contains(t, output, "\n")
 }
+
+// ENH-J1: statusToJSONSlot includes behind_count and commit_subject
+func TestStatusToJSONSlot_BehindAndCommitSubject(t *testing.T) {
+	s := slot.SlotStatus{
+		Slot: slot.Slot{
+			Name:        "work",
+			Path:        "/slots/work",
+			State:       slot.SlotActive,
+			Branch:      "feat/auth",
+			HeadHash:    "abc1234",
+			HasUpstream: true,
+			AheadCount:  1,
+			BehindCount: 2,
+		},
+		CommitSubject: "feat: add auth",
+	}
+	got := statusToJSONSlot(s)
+	assert.Equal(t, 2, got.BehindCount)
+	assert.Equal(t, "feat: add auth", got.CommitSubject)
+	assert.Equal(t, 1, got.AheadCount)
+	assert.True(t, got.HasUpstream)
+}
+
+// ENH-J2: empty slot statusToJSONSlot omits commit_subject
+func TestStatusToJSONSlot_EmptySlot_OmitsCommitSubject(t *testing.T) {
+	s := slot.SlotStatus{
+		Slot: slot.Slot{
+			Name:  "experiment",
+			Path:  "/slots/experiment",
+			State: slot.SlotEmpty,
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeJSON(&buf, statusToJSONSlot(s)))
+
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &raw))
+
+	_, hasCommitSubject := raw["commit_subject"]
+	assert.False(t, hasCommitSubject, "commit_subject should be omitted for empty slot")
+	assert.Equal(t, float64(0), raw["behind_count"])
+}

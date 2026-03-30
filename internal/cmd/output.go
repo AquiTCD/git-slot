@@ -8,14 +8,16 @@ import (
 )
 
 type jsonSlot struct {
-	Name        string `json:"name"`
-	State       string `json:"state"`
-	Branch      string `json:"branch"`
-	Head        string `json:"head"`
-	Path        string `json:"path"`
-	DirtyCount  int    `json:"dirty_count"`
-	AheadCount  int    `json:"ahead_count"`
-	HasUpstream bool   `json:"has_upstream"`
+	Name          string `json:"name"`
+	State         string `json:"state"`
+	Branch        string `json:"branch"`
+	Head          string `json:"head"`
+	CommitSubject string `json:"commit_subject,omitempty"`
+	Path          string `json:"path"`
+	DirtyCount    int    `json:"dirty_count"`
+	AheadCount    int    `json:"ahead_count"`
+	BehindCount   int    `json:"behind_count"`
+	HasUpstream   bool   `json:"has_upstream"`
 }
 
 type jsonSlotList struct {
@@ -47,7 +49,23 @@ func slotToJSON(s slot.Slot) jsonSlot {
 		Path:        s.Path,
 		DirtyCount:  s.DirtyCount,
 		AheadCount:  s.AheadCount,
+		BehindCount: s.BehindCount,
 		HasUpstream: s.HasUpstream,
+	}
+}
+
+func statusToJSONSlot(s slot.SlotStatus) jsonSlot {
+	return jsonSlot{
+		Name:          s.Name,
+		State:         s.DisplayState(),
+		Branch:        s.Branch,
+		Head:          s.HeadHash,
+		CommitSubject: s.CommitSubject,
+		Path:          s.Path,
+		DirtyCount:    s.DirtyCount,
+		AheadCount:    s.AheadCount,
+		BehindCount:   s.BehindCount,
+		HasUpstream:   s.HasUpstream,
 	}
 }
 
