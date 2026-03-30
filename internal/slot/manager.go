@@ -60,10 +60,16 @@ func (m *Manager) populateSlot(s *Slot, wtByPath map[string]git.WorktreeInfo) er
 		s.AheadCount = 0
 		s.BehindCount = 0
 	} else {
-		s.HasUpstream = true
-		s.AheadCount = aheadCount
-		behindCount, _ := m.wt.BehindCount(s.Path)
-		s.BehindCount = behindCount
+		behindCount, err := m.wt.BehindCount(s.Path)
+		if err != nil {
+			s.HasUpstream = false
+			s.AheadCount = 0
+			s.BehindCount = 0
+		} else {
+			s.HasUpstream = true
+			s.AheadCount = aheadCount
+			s.BehindCount = behindCount
+		}
 	}
 
 	return nil
