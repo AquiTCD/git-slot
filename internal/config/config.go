@@ -8,11 +8,33 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
+type TUIConfig struct {
+	LogLines  int    `toml:"log_lines"`
+	LogFormat string `toml:"log_format"`
+}
+
+const defaultLogFormat = "%Cred%h%Creset %Cgreen%ad%Creset %s%Cred%d%Creset"
+
 type Config struct {
 	WtBasePath  string           `toml:"wt_base_path,omitempty"`
 	LaunchShell *bool            `toml:"launch_shell,omitempty"`
 	Slots       []SlotDefinition `toml:"slots,omitempty"`
 	Hooks       HooksConfig      `toml:"hooks,omitempty"`
+	TUI         TUIConfig        `toml:"tui,omitempty"`
+}
+
+func (c *Config) TUILogLines() int {
+	if c.TUI.LogLines <= 0 {
+		return 5
+	}
+	return c.TUI.LogLines
+}
+
+func (c *Config) TUILogFormat() string {
+	if c.TUI.LogFormat == "" {
+		return defaultLogFormat
+	}
+	return c.TUI.LogFormat
 }
 
 type SlotDefinition struct {
