@@ -191,7 +191,12 @@ func selectSlotInteractive(a *app) (string, error) {
 
 	var branches []string
 	noColor := tui.IsNoColor()
-	model := tui.NewInteractiveModel(activeSlots, branches, noColor)
+	logLines := a.cfg.TUILogLines()
+	logFormat := a.cfg.TUILogFormat()
+	logFetcher := func(path string, n int, format string) ([]string, error) {
+		return a.wt.RecentLogs(path, n, format)
+	}
+	model := tui.NewInteractiveModel(activeSlots, branches, noColor, logFetcher, logLines, logFormat)
 
 	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {
