@@ -31,19 +31,22 @@ func init() {
 }
 
 func runList(mgr slot.SlotManager, out io.Writer, useJSON bool) error {
-	slots, err := mgr.List()
-	if err != nil {
-		return err
-	}
-
 	if useJSON {
-		items := make([]jsonSlot, len(slots))
-		for i, s := range slots {
-			items[i] = slotToJSON(s)
+		statuses, err := mgr.StatusAll()
+		if err != nil {
+			return err
+		}
+		items := make([]jsonSlot, len(statuses))
+		for i, s := range statuses {
+			items[i] = statusToJSONSlot(s)
 		}
 		return writeJSON(out, jsonSlotList{Slots: items})
 	}
 
+	slots, err := mgr.List()
+	if err != nil {
+		return err
+	}
 	noColor := tui.IsNoColor()
 	_, _ = fmt.Fprintln(out, tui.RenderSlotList(slots, noColor))
 	return nil

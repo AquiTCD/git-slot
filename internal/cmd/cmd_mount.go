@@ -108,7 +108,7 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 	}
 
 	noColor := tui.IsNoColor()
-	model := tui.NewInteractiveModel(slots, branches, noColor)
+	model := tui.NewInteractiveModel(slots, branches, noColor, a.wt.RecentLogs, a.cfg.TUILogLines(), a.cfg.TUILogFormat())
 
 	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {

@@ -93,9 +93,15 @@ func TestRunList_Text(t *testing.T) {
 
 func TestRunList_JSON(t *testing.T) {
 	mgr := &mockSlotManager{
-		listFn: func() ([]slot.Slot, error) {
-			return []slot.Slot{
-				{Name: "work", State: slot.SlotActive, Branch: "main", Path: "/slots/work"},
+		statusAllFn: func() ([]slot.SlotStatus, error) {
+			return []slot.SlotStatus{
+				{
+					Slot: slot.Slot{
+						Name: "work", State: slot.SlotActive, Branch: "main", Path: "/slots/work",
+						HasUpstream: true, AheadCount: 1, BehindCount: 2,
+					},
+					CommitSubject: "feat: add something",
+				},
 			}, nil
 		},
 	}
@@ -105,6 +111,8 @@ func TestRunList_JSON(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), `"name": "work"`)
 	assert.Contains(t, buf.String(), `"state": "active"`)
+	assert.Contains(t, buf.String(), `"behind_count": 2`)
+	assert.Contains(t, buf.String(), `"commit_subject": "feat: add something"`)
 }
 
 func TestRunList_Error(t *testing.T) {

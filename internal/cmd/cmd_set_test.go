@@ -34,3 +34,16 @@ func TestSetSubcommand_BranchShortFlag(t *testing.T) {
 	require.NotNil(t, f)
 	assert.Equal(t, "b", f.Shorthand)
 }
+
+// ENH-P1-T1: --pr flag is registered
+func TestSetSubcommand_PRFlag_Registered(t *testing.T) {
+	f := setCmd.Flags().Lookup("pr")
+	require.NotNil(t, f, "--pr flag should be registered on set command")
+}
+
+// ENH-P1-T2: --pr and --create cannot be used together
+func TestSetSubcommand_PRAndCreate_Error(t *testing.T) {
+	_, err := executeCommand("set", "work", "--pr", "1", "-c", "new-branch")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--pr と --create は同時に使えません")
+}

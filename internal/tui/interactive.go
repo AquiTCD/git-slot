@@ -7,6 +7,7 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type step int
@@ -24,6 +25,11 @@ type Result struct {
 	CreateBranch bool
 }
 
+type logLoadedMsg struct {
+	slotPath string
+	lines    []string
+}
+
 type Model struct {
 	slots         []slot.Slot
 	filteredSlots []slot.Slot
@@ -35,9 +41,22 @@ type Model struct {
 	filterQuery   string
 	result        Result
 	noColor       bool
+	logFetcher    func(path string, n int, format string) ([]string, error)
+	logLines      int
+	logFormat     string
+	rightPane     []string
+	width         int
+	height        int
 }
 
-func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Model {
+func NewInteractiveModel(
+	slots []slot.Slot,
+	branches []string,
+	noColor bool,
+	logFetcher func(path string, n int, format string) ([]string, error),
+	logLines int,
+	logFormat string,
+) Model {
 	ti := textinput.New()
 	ti.Placeholder = "branch name (prefix with + to create new)"
 	ti.CharLimit = 256
@@ -59,6 +78,9 @@ func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Mod
 		input:         ti,
 		filterInput:   fi,
 		noColor:       noColor,
+		logFetcher:    logFetcher,
+		logLines:      logLines,
+		logFormat:     logFormat,
 	}
 
 	m.filterInput.Focus()
@@ -67,16 +89,26 @@ func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Mod
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.filterInput.Cursor.BlinkCmd()
+	return tea.Batch(m.filterInput.Cursor.BlinkCmd(), m.fetchLogsForCurrent())
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
+	case logLoadedMsg:
+		if len(m.filteredSlots) > 0 && m.filteredSlots[m.cursor].Path == msg.slotPath {
+			m.rightPane = msg.lines
+		}
+		return m, nil
+	case tea.KeyMsg:
 		switch m.step {
 		case stepSlotSelect:
-			return m.updateSlotSelect(keyMsg)
+			return m.updateSlotSelect(msg)
 		case stepBranchInput:
-			return m.updateBranchInput(keyMsg)
+			return m.updateBranchInput(msg)
 		}
 	}
 	return m, nil
@@ -90,18 +122,19 @@ func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "up", "ctrl+k":
 		if m.cursor > 0 {
 			m.cursor--
+			return m, m.fetchLogsForCurrent()
 		}
 		return m, nil
 	case "down", "ctrl+j":
 		if m.cursor < len(m.filteredSlots)-1 {
 			m.cursor++
+			return m, m.fetchLogsForCurrent()
 		}
 		return m, nil
 	case "enter":
 		return m.selectCurrentSlot()
 	}
 
-	// Pass other keys to the filter input
 	var cmd tea.Cmd
 	m.filterInput, cmd = m.filterInput.Update(msg)
 
@@ -109,9 +142,30 @@ func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if newQuery != m.filterQuery {
 		m.filterQuery = newQuery
 		m.applyFilter()
+		return m, tea.Batch(cmd, m.fetchLogsForCurrent())
 	}
 
 	return m, cmd
+}
+
+func (m Model) fetchLogsForCurrent() tea.Cmd {
+	if len(m.filteredSlots) == 0 || m.logFetcher == nil {
+		return nil
+	}
+	s := m.filteredSlots[m.cursor]
+	if s.State != slot.SlotActive {
+		return func() tea.Msg {
+			return logLoadedMsg{slotPath: s.Path, lines: nil}
+		}
+	}
+	fetcher := m.logFetcher
+	n := m.logLines
+	format := m.logFormat
+	path := s.Path
+	return func() tea.Msg {
+		lines, _ := fetcher(path, n, format)
+		return logLoadedMsg{slotPath: path, lines: lines}
+	}
 }
 
 func (m *Model) applyFilter() {
@@ -212,6 +266,25 @@ func (m Model) View() string {
 }
 
 func (m Model) viewSlotSelect() string {
+	leftContent := m.buildLeftPane()
+	rightContent := m.buildRightPane()
+
+	leftWidth := 44
+	if m.width > 0 {
+		leftWidth = m.width / 2
+	}
+
+	leftPane := lipgloss.NewStyle().Width(leftWidth).Render(leftContent)
+	rightPane := lipgloss.NewStyle().
+		BorderLeft(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		PaddingLeft(1).
+		Render(rightContent)
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
+}
+
+func (m Model) buildLeftPane() string {
 	var b strings.Builder
 	prompt := render(StyleSelected, "Select a slot:", m.noColor)
 	b.WriteString(prompt + "\n\n")
@@ -225,6 +298,20 @@ func (m Model) viewSlotSelect() string {
 
 	b.WriteString("\n↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit")
 	return b.String()
+}
+
+func (m Model) buildRightPane() string {
+	if len(m.filteredSlots) == 0 {
+		return "(empty)"
+	}
+	s := m.filteredSlots[m.cursor]
+	if s.State != slot.SlotActive {
+		return "(empty)"
+	}
+	if len(m.rightPane) == 0 {
+		return "Loading..."
+	}
+	return strings.Join(m.rightPane, "\n")
 }
 
 func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {

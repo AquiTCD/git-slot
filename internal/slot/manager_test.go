@@ -20,9 +20,12 @@ type mockWorktree struct {
 	branchExistsFn  func(branch string) (bool, error)
 	dirtyCountFn    func(path string) (int, error)
 	aheadCountFn    func(path string) (int, error)
+	behindCountFn   func(path string) (int, error)
 	commitSubjectFn func(path string) (string, error)
 	statusShortFn   func(path string) ([]string, error)
 	listBranchesFn  func() ([]string, error)
+	fetchBranchFn   func(branch string) error
+	recentLogsFn    func(path string, n int, format string) ([]string, error)
 }
 
 func (m *mockWorktree) List() ([]git.WorktreeInfo, error) { return m.listFn() }
@@ -57,6 +60,12 @@ func (m *mockWorktree) AheadCount(path string) (int, error) {
 	}
 	return 0, nil
 }
+func (m *mockWorktree) BehindCount(path string) (int, error) {
+	if m.behindCountFn != nil {
+		return m.behindCountFn(path)
+	}
+	return 0, nil
+}
 func (m *mockWorktree) CommitSubject(path string) (string, error) {
 	return m.commitSubjectFn(path)
 }
@@ -66,6 +75,18 @@ func (m *mockWorktree) StatusShort(path string) ([]string, error) {
 func (m *mockWorktree) ListBranches() ([]string, error) {
 	if m.listBranchesFn != nil {
 		return m.listBranchesFn()
+	}
+	return nil, nil
+}
+func (m *mockWorktree) FetchBranch(branch string) error {
+	if m.fetchBranchFn != nil {
+		return m.fetchBranchFn(branch)
+	}
+	return nil
+}
+func (m *mockWorktree) RecentLogs(path string, n int, format string) ([]string, error) {
+	if m.recentLogsFn != nil {
+		return m.recentLogsFn(path, n, format)
 	}
 	return nil, nil
 }
@@ -869,4 +890,78 @@ func TestStatusAll(t *testing.T) {
 	assert.Equal(t, "hotfix", statuses[1].Name)
 	assert.Equal(t, SlotEmpty, statuses[1].State)
 	assert.Empty(t, statuses[1].CommitSubject)
+}
+
+// --- BehindCount tests ---
+
+func TestList_BehindCount_WithUpstream(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
+			}, nil
+		},
+		aheadCountFn:  func(_ string) (int, error) { return 1, nil },
+		behindCountFn: func(_ string) (int, error) { return 3, nil },
+	}
+
+	mgr := NewManager(cfg, "/base", "repo", mock)
+	slots, err := mgr.List()
+
+	require.NoError(t, err)
+	require.Len(t, slots, 1)
+	assert.True(t, slots[0].HasUpstream)
+	assert.Equal(t, 1, slots[0].AheadCount)
+	assert.Equal(t, 3, slots[0].BehindCount)
+}
+
+func TestList_BehindCount_NoUpstream(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/repo@work", Branch: "feature/x", HeadHash: "abc1234"},
+			}, nil
+		},
+		aheadCountFn:  func(_ string) (int, error) { return 0, errors.New("no upstream") },
+		behindCountFn: func(_ string) (int, error) { return 0, errors.New("no upstream") },
+	}
+
+	mgr := NewManager(cfg, "/base", "repo", mock)
+	slots, err := mgr.List()
+
+	require.NoError(t, err)
+	require.Len(t, slots, 1)
+	assert.False(t, slots[0].HasUpstream)
+	assert.Equal(t, 0, slots[0].AheadCount)
+	assert.Equal(t, 0, slots[0].BehindCount)
+}
+
+func TestList_BehindCount_Zero(t *testing.T) {
+	cfg := &config.Config{
+		Slots: []config.SlotDefinition{{Name: "work"}},
+	}
+	mock := &mockWorktree{
+		listFn: func() ([]git.WorktreeInfo, error) {
+			return []git.WorktreeInfo{
+				{Path: "/base/repo@work", Branch: "main", HeadHash: "abc1234"},
+			}, nil
+		},
+		aheadCountFn:  func(_ string) (int, error) { return 0, nil },
+		behindCountFn: func(_ string) (int, error) { return 0, nil },
+	}
+
+	mgr := NewManager(cfg, "/base", "repo", mock)
+	slots, err := mgr.List()
+
+	require.NoError(t, err)
+	require.Len(t, slots, 1)
+	assert.True(t, slots[0].HasUpstream)
+	assert.Equal(t, 0, slots[0].AheadCount)
+	assert.Equal(t, 0, slots[0].BehindCount)
 }

@@ -16,6 +16,7 @@ type Slot struct {
 	HeadHash    string
 	DirtyCount  int
 	AheadCount  int
+	BehindCount int
 	HasUpstream bool
 }
 
