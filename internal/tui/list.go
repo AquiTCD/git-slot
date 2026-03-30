@@ -65,8 +65,8 @@ func renderSlotLine(s slot.Slot, nameWidth int, hasIcons, noColor bool) string {
 		parts = append(parts, render(StyleDirtyMark, dirtyMark, noColor))
 
 		if s.HasUpstream {
-			aheadMark := fmt.Sprintf("↑%d", s.AheadCount)
-			parts = append(parts, render(StyleAheadMark, aheadMark, noColor))
+			syncMark := fmt.Sprintf("↑%d ↓%d", s.AheadCount, s.BehindCount)
+			parts = append(parts, render(StyleAheadMark, syncMark, noColor))
 		}
 	}
 

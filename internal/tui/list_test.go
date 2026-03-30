@@ -139,3 +139,35 @@ func TestRenderSlotList_NoUpstream(t *testing.T) {
 	result := RenderSlotList(slots, true)
 	assert.NotContains(t, result, "↑")
 }
+
+// ENH-T1: behind 2 commits => "↓2" in output
+func TestRenderSlotList_BehindCount(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
+			HasUpstream: true, AheadCount: 1, BehindCount: 2},
+	}
+	result := RenderSlotList(slots, true)
+	assert.Contains(t, result, "↓2")
+	assert.Contains(t, result, "↑1")
+}
+
+// ENH-T2: no upstream => no "↓"
+func TestRenderSlotList_NoBehindMark_NoUpstream(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "feat/x", HeadHash: "abc1234",
+			HasUpstream: false, AheadCount: 0, BehindCount: 0},
+	}
+	result := RenderSlotList(slots, true)
+	assert.NotContains(t, result, "↓")
+}
+
+// ENH-T3: both ahead=0 behind=0 => "↑0 ↓0"
+func TestRenderSlotList_CleanWithUpstream_ShowsBothCounters(t *testing.T) {
+	slots := []slot.Slot{
+		{Name: "work", State: slot.SlotActive, Branch: "main", HeadHash: "abc1234",
+			HasUpstream: true, AheadCount: 0, BehindCount: 0},
+	}
+	result := RenderSlotList(slots, true)
+	assert.Contains(t, result, "↑0")
+	assert.Contains(t, result, "↓0")
+}
