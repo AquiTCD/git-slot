@@ -41,17 +41,7 @@ func writeJSON(w io.Writer, v any) error {
 }
 
 func slotToJSON(s slot.Slot) jsonSlot {
-	return jsonSlot{
-		Name:        s.Name,
-		State:       s.DisplayState(),
-		Branch:      s.Branch,
-		Head:        s.HeadHash,
-		Path:        s.Path,
-		DirtyCount:  s.DirtyCount,
-		AheadCount:  s.AheadCount,
-		BehindCount: s.BehindCount,
-		HasUpstream: s.HasUpstream,
-	}
+	return statusToJSONSlot(slot.SlotStatus{Slot: s})
 }
 
 func statusToJSONSlot(s slot.SlotStatus) jsonSlot {
