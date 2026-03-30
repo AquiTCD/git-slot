@@ -26,9 +26,12 @@ type Worktree interface {
 	IsDirty(path string) (bool, error)
 	DirtyCount(path string) (int, error)
 	AheadCount(path string) (int, error)
+	BehindCount(path string) (int, error)
 	CommitSubject(path string) (string, error)
 	StatusShort(path string) ([]string, error)
 	ListBranches() ([]string, error)
+	FetchBranch(branch string) error
+	RecentLogs(path string, n int, format string) ([]string, error)
 }
 
 type ExecWorktree struct {
@@ -237,6 +240,48 @@ func (w *ExecWorktree) StatusShort(path string) ([]string, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("git status --short: %w", err)
+	}
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
+}
+
+func (w *ExecWorktree) BehindCount(path string) (int, error) {
+	cmd := exec.Command("git", "-C", path, "rev-list", "--count", "HEAD..@{u}")
+
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("git rev-list: %w", err)
+	}
+
+	raw := strings.TrimSpace(string(out))
+	var count int
+	if _, err := fmt.Sscan(raw, &count); err != nil {
+		return 0, fmt.Errorf("parse behind count %q: %w", raw, err)
+	}
+	return count, nil
+}
+
+func (w *ExecWorktree) FetchBranch(branch string) error {
+	cmd := exec.Command("git", "fetch", "origin", branch)
+	cmd.Dir = w.dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git fetch origin %s: %s: %w", branch, strings.TrimSpace(string(out)), err)
+	}
+	return nil
+}
+
+func (w *ExecWorktree) RecentLogs(path string, n int, format string) ([]string, error) {
+	cmd := exec.Command("git", "-C", path, "log",
+		"--graph", "--date-order",
+		"--pretty=format:"+format,
+		"--date=short",
+		fmt.Sprintf("-%d", n))
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git log: %w", err)
 	}
 	raw := strings.TrimSpace(string(out))
 	if raw == "" {
