@@ -99,7 +99,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 	case logLoadedMsg:
-		m.rightPane = msg.lines
+		if len(m.filteredSlots) > 0 && m.filteredSlots[m.cursor].Path == msg.slotPath {
+			m.rightPane = msg.lines
+		}
 		return m, nil
 	case tea.KeyMsg:
 		switch m.step {

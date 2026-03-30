@@ -204,15 +204,29 @@ func TestRightPane_ActiveSlot_ShowsLogs(t *testing.T) {
 	assert.Contains(t, rp, "def5678 fix: null pointer")
 }
 
-// ENH-P2-T3: logLoadedMsg updates rightPane
+// ENH-P2-T3: logLoadedMsg updates rightPane when slotPath matches current cursor
 func TestLogLoadedMsg_UpdatesRightPane(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
+	m.cursor = 1 // fire, Path="/slots/fire"
 	updated, _ := m.Update(logLoadedMsg{
 		slotPath: "/slots/fire",
 		lines:    []string{"abc feat: x", "def fix: y"},
 	})
 	m2 := updated.(Model)
 	assert.Equal(t, []string{"abc feat: x", "def fix: y"}, m2.rightPane)
+}
+
+// ENH-P2-T3b: stale logLoadedMsg (wrong slotPath) does NOT update rightPane
+func TestLogLoadedMsg_StaleMsg_DoesNotUpdateRightPane(t *testing.T) {
+	m := newInteractiveTestModel(testSlots(), true)
+	m.cursor = 1 // fire, Path="/slots/fire"
+	m.rightPane = []string{"existing log"}
+	updated, _ := m.Update(logLoadedMsg{
+		slotPath: "/slots/wood", // stale: cursor has moved away
+		lines:    []string{"stale log"},
+	})
+	m2 := updated.(Model)
+	assert.Equal(t, []string{"existing log"}, m2.rightPane, "stale msg should not overwrite rightPane")
 }
 
 // ENH-P2-T4: active slot with no logs yet => "Loading..."
