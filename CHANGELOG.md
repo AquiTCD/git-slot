@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-03-30
+
+### Added
+
+- `git slot set <slot> --pr <number>`: check out a GitHub PR branch directly into a slot via `gh` CLI. Warns if the PR is MERGED or CLOSED but continues. `--pr` and `--create/-c` are mutually exclusive.
+- `git slot list` text output now shows `↑N ↓N` sync counters (upstream behind count alongside ahead count).
+- `git slot list --json` output now includes `behind_count` and `commit_subject` fields per slot.
+- TUI interactive slot selector gains a split-pane right panel showing recent commits for the hovered slot. Supports async loading with staleness guard on fast navigation.
+- `[tui]` config section with `log_lines` (default: 5) and `log_format` (default: compact hash+date+subject+refs) settings for the TUI log preview.
+
+### Changed
+
+- `list --json` now calls `StatusAll()` internally so `commit_subject` is populated without a separate per-slot `status` call.
+- `slotToJSON` delegates to `statusToJSONSlot` to eliminate field duplication.
+- `logFetcher` closure replaced with direct `wt.RecentLogs` method reference in TUI callers.
+
+### Fixed
+
+- `BehindCount` failure now rolls back `HasUpstream` (previously a silent error could show misleading `↑2 ↓0` output).
+- `gh pr view` errors are now wrapped with `%w` to preserve diagnostic detail for auth/network failures.
+- Removed `--graph` flag from `RecentLogs` to prevent blank separator lines from inflating the TUI right pane.
+- `logLoadedMsg` now checks `slotPath` before applying to `rightPane`, preventing stale logs from flashing during fast cursor navigation.
+
 ## [0.8.6] - 2026-03-27
 
 ### Fixed
@@ -296,6 +319,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.9.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.9.0
 [0.8.6]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.6
 [0.8.5]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.5
 [0.8.4]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.4
