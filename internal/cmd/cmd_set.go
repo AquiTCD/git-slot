@@ -89,7 +89,7 @@ func runPRCheckout(a *app, slotName string, prNumber int, opts mountOptions, out
 	ghCmd.Dir = a.repoRoot
 	ghOut, err := ghCmd.Output()
 	if err != nil {
-		return fmt.Errorf("PR #%d が見つかりません", prNumber)
+		return fmt.Errorf("PR #%d が見つかりません: %w", prNumber, err)
 	}
 
 	var prInfo struct {
