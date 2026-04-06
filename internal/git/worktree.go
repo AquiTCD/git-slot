@@ -275,6 +275,7 @@ func (w *ExecWorktree) FetchBranch(branch string) error {
 
 func (w *ExecWorktree) RecentLogs(path string, n int, format string) ([]string, error) {
 	cmd := exec.Command("git", "-C", path, "log",
+		"--color=always",
 		"--date-order",
 		"--pretty=format:"+format,
 		"--date=short",
