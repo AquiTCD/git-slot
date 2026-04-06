@@ -22,6 +22,7 @@ Git Slot は、`git worktree` を TOML 設定で定義された固定名のス�
 - **インタラクティブ TUI** — スロット選択・ブランチ入力を対話的に操作できます（あいまいフィルタ対応）
 - **Git サブコマンド** — `git slot` として自然に使えます
 - **サブシェルモード** — スロット内でサブシェルを起動し、GSL_* 環境変数を自動エクスポートします
+- **AI エージェント対応** — Claude Code・Cursor・Windsurf などの AI コーディングエージェント向けガイドラインを1コマンドでインストールできます
 
 ## Git Slot の本質
 
@@ -170,6 +171,36 @@ gsl set main-work feature/nice-ui
 # スクリプト用途では --no-shell で抑制
 git slot set main-work feature/nice-ui --no-shell
 ```
+
+## AI エージェントとの連携
+
+Git Slot は **Claude Code・Cursor・Windsurf などの AI コーディングエージェント** と組み合わせて使うことを想定した機能を備えています。
+
+`install-skill` コマンドで、AI エージェントが git-slot を正しく使うためのガイドライン（Skill ファイル）をプロジェクトに追加できます。エージェントはこのファイルを読み込んで、スロットを意識した worktree 操作を自動的に行えるようになります。
+
+```bash
+# .agents/skills/git-slot-workflow/SKILL.md にインストール（デフォルト）
+git slot install-skill
+
+# Claude Code の場合: カスタムスキルディレクトリを指定
+git slot install-skill ~/.claude/skills
+
+# Cursor / Windsurf の場合: 既存の rules ファイルに追記
+git slot install-skill --append .cursorrules
+git slot install-skill --append .windsurfrules
+
+# 内容だけ確認したい場合
+git slot install-skill --stdout
+```
+
+インストールされたガイドラインには以下が含まれています:
+
+- 並行開発時のスロット選択・ブランチ装填の手順
+- `gsl`・`git slot` コマンドの正しい使い分け
+- dirty 状態や upstream ズレへの対処パターン
+- よくある誤操作（直接 `git worktree` を叩く等）の回避方法
+
+> **ワンライナーで完了** — チームメンバーへの共有も `git slot install-skill` 一発です。
 
 ## 設定
 
