@@ -253,6 +253,7 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `git slot hook [-g]` | フック設定の TUI を起動します（`-g` でグローバル） |
 | `git slot root` | リポジトリルートのパスを出力します（`gsl root` で cd） |
 | `git slot shell [slot]` | スロット内でサブシェルを起動します |
+| `git slot install-skill [dir]`| AIエージェント向けガイドライン（skill）を出力・インストールします |
 | `git slot -v, --version` | バージョン情報を表示します |
 
 ### サブコマンド別フラグ
@@ -265,6 +266,8 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `-c, --create` | `set` | 新規ブランチを作成して装填します |
 | `-b, --branch` | `set` | `--create` のエイリアスです |
 | `--no-shell` | `set` | サブシェル起動を抑制します（`launch_shell` 有効時） |
+| `--stdout` | `install-skill` | ガイドラインを標準出力へ出力します |
+| `--append <file>`| `install-skill` | ガイドラインを既存の設定ファイル（例：`.cursorrules`）に追記します |
 
 ## 技術スタック
 

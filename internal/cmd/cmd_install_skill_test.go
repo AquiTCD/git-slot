@@ -72,7 +72,7 @@ func TestInstallSkill_Files(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		expectedFile := filepath.Join("my-agents", "skill", "SKILL.md")
+		expectedFile := filepath.Join("my-agents", "skill", "git-slot-workflow", "SKILL.md")
 		b, err := os.ReadFile(expectedFile)
 		if err != nil {
 			t.Fatalf("failed to read created file %q: %v", expectedFile, err)

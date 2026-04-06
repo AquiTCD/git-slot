@@ -60,6 +60,10 @@ func runInstallSkill(cmd *cobra.Command, args []string) error {
 	outDir := ".agents/skills/git-slot-workflow"
 	if len(args) > 0 {
 		outDir = args[0]
+		base := filepath.Base(filepath.Clean(outDir))
+		if base != "git-slot-workflow" && base != "git-slot" {
+			outDir = filepath.Join(outDir, "git-slot-workflow")
+		}
 	}
 
 	if err := os.MkdirAll(outDir, 0755); err != nil {
