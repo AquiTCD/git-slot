@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-04-06
+
+### Added
+
+- `git slot install-skill`: New command to install embedded AI workflow guidelines. This allows AI coding agents (Cursor, Windsurf, Claude Code) to natively operate within parallel slots without hanging on interactive shell prompts via the `--no-shell` requirement. Supports `--stdout` and `--append` options.
+
 ## [0.9.0] - 2026-03-30
 
 ### Added
@@ -319,6 +325,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.10.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.10.0
 [0.9.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.9.0
 [0.8.6]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.6
 [0.8.5]: https://github.com/AquiTCD/git-slot/releases/tag/v0.8.5
