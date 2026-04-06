@@ -186,7 +186,7 @@ func TestFilter_CursorClamped(t *testing.T) {
 func TestRightPane_EmptySlot_ShowsEmptyLabel(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	// cursor starts at 0 = wood (empty)
-	rp := m.buildRightPane()
+	rp := m.buildRightPane(80)
 	assert.Equal(t, "(empty)", rp)
 }
 
@@ -199,7 +199,7 @@ func TestRightPane_ActiveSlot_ShowsLogs(t *testing.T) {
 	m := NewInteractiveModel(testSlots(), nil, true, fetcher, 5, "%h %s")
 	m.cursor = 1 // fire (active)
 	m.rightPane = logs
-	rp := m.buildRightPane()
+	rp := m.buildRightPane(80)
 	assert.Contains(t, rp, "abc1234 feat: add auth")
 	assert.Contains(t, rp, "def5678 fix: null pointer")
 }
@@ -233,8 +233,8 @@ func TestLogLoadedMsg_StaleMsg_DoesNotUpdateRightPane(t *testing.T) {
 func TestRightPane_ActiveSlot_LoadingState(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	m.cursor = 1 // fire (active), rightPane is nil
-	rp := m.buildRightPane()
-	assert.Equal(t, "Loading...", rp)
+	rp := m.buildRightPane(80)
+	assert.Contains(t, rp, "Loading...")
 }
 
 // ENH-P2-T5: cursor move triggers non-nil log fetch cmd

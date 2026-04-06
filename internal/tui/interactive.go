@@ -266,22 +266,59 @@ func (m Model) View() string {
 }
 
 func (m Model) viewSlotSelect() string {
-	leftContent := m.buildLeftPane()
-	rightContent := m.buildRightPane()
-
-	leftWidth := 44
-	if m.width > 0 {
-		leftWidth = m.width / 2
+	totalWidth := m.width
+	if totalWidth == 0 {
+		totalWidth = 88
 	}
 
-	leftPane := lipgloss.NewStyle().Width(leftWidth).Render(leftContent)
-	rightPane := lipgloss.NewStyle().
-		BorderLeft(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		PaddingLeft(1).
-		Render(rightContent)
+	// Outer: RoundedBorder l+r (2) + Padding l+r (2) = 4 overhead
+	innerWidth := totalWidth - 4
+	// Left pane gets 1 char left padding; │ separator = 1 char
+	leftPad := 1
+	leftWidth := innerWidth * 2 / 5
+	leftContentWidth := leftWidth - leftPad
+	rightWidth := innerWidth - leftWidth - 1
+	if rightWidth < 10 {
+		rightWidth = 10
+	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
+	// Render each pane as a fixed-width block.
+	// lipgloss guarantees every output line is padded to exactly the specified width,
+	// and long lines wrap within the pane rather than overflowing into the other pane.
+	leftBlock := lipgloss.NewStyle().Width(leftContentWidth).PaddingLeft(leftPad).Render(m.buildLeftPane())
+	rightBlock := lipgloss.NewStyle().Width(rightWidth).Render(m.buildRightPane(rightWidth))
+
+	leftLines := strings.Split(leftBlock, "\n")
+	rightLines := strings.Split(rightBlock, "\n")
+
+	// Pad both sides to equal height so │ runs the full length
+	height := max(len(leftLines), len(rightLines))
+	emptyLeft := strings.Repeat(" ", leftWidth)
+	emptyRight := strings.Repeat(" ", rightWidth)
+	for len(leftLines) < height {
+		leftLines = append(leftLines, emptyLeft)
+	}
+	for len(rightLines) < height {
+		rightLines = append(rightLines, emptyRight)
+	}
+
+	sep := lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("│")
+
+	rows := make([]string, height)
+	for i := range leftLines {
+		rows[i] = leftLines[i] + sep + rightLines[i]
+	}
+
+	// "git slot" title as first content line inside the box
+	titleLine := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5")).Render("git slot")
+	body := titleLine + "\n" + strings.Join(rows, "\n")
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("5")).
+		Padding(0, 1).
+		Width(innerWidth).
+		Render(body)
 }
 
 func (m Model) buildLeftPane() string {
@@ -300,7 +337,7 @@ func (m Model) buildLeftPane() string {
 	return b.String()
 }
 
-func (m Model) buildRightPane() string {
+func (m Model) buildRightPane(_ int) string {
 	if len(m.filteredSlots) == 0 {
 		return "(empty)"
 	}
@@ -308,10 +345,19 @@ func (m Model) buildRightPane() string {
 	if s.State != slot.SlotActive {
 		return "(empty)"
 	}
-	if len(m.rightPane) == 0 {
-		return "Loading..."
+
+	icon := ""
+	if s.Icon != "" {
+		icon = s.Icon + " "
 	}
-	return strings.Join(m.rightPane, "\n")
+	slotLabel := render(StyleSelected, icon+s.Name, m.noColor)
+	branchLabel := render(StyleBranch, "  "+s.Branch, m.noColor)
+	title := slotLabel + branchLabel
+
+	if len(m.rightPane) == 0 {
+		return title + "\n\nLoading..."
+	}
+	return title + "\n\n" + strings.Join(m.rightPane, "\n")
 }
 
 func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {
