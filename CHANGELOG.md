@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-04-06
+
+### Added
+
+- TUI split-view layout redesign: the interactive slot selector is now wrapped in a RoundedBorder frame with a "git slot" title, a full-height `│` separator between panes, and the right pane header shows the slot icon + name + branch in matching colors.
+- README: new "AI エージェントとの連携" section highlighting `install-skill` with usage examples for Claude Code, Cursor, and Windsurf.
+
+### Fixed
+
+- `RecentLogs` now passes `--color=always` to `git log` so ANSI color codes are emitted even when stdout is not a TTY (previously colors were stripped inside Bubble Tea).
+
 ## [0.10.1] - 2026-04-06
 
 ### Fixed
@@ -331,6 +342,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.11.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.11.0
 [0.10.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.10.1
 [0.10.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.10.0
 [0.9.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.9.0
