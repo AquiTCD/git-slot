@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] - 2026-04-08
+
+### Fixed
+
+- Interactive slot-select TUI: split-pane rows stay a fixed width so the `│` separator and columns no longer break when lines are long or git log output contains ANSI colors (avoid lipgloss re-wrap on the outer frame and on each column).
+- Left column (slots and branches) now gets a larger share of width using a golden-ratio split.
+
+### Changed
+
+- Default `[tui] log_format` is now date + subject only (`%Cgreen%ad%Creset %s`); branch remains visible in the right-pane header. Custom `log_format` in config still overrides.
+- `app.newInteractiveSlotModel` / `listBranchesForTUI` centralize interactive TUI wiring for mount and shell commands.
+
+### Added
+
+- Tests for TUI layout invariants, `joinSplitPaneRows`, filter width on resize, and default `TUILogFormat`.
+
 ## [0.11.0] - 2026-04-06
 
 ### Added
@@ -342,6 +358,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.12.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.12.0
 [0.11.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.11.0
 [0.10.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.10.1
 [0.10.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.10.0
