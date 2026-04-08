@@ -13,7 +13,8 @@ type TUIConfig struct {
 	LogFormat string `toml:"log_format"`
 }
 
-const defaultLogFormat = "%Cred%h%Creset %Cgreen%ad%Creset %s%Cred%d%Creset"
+// Default TUI log line: date + subject only (branch is already shown in the pane header).
+const defaultLogFormat = "%Cgreen%ad%Creset %s"
 
 type Config struct {
 	WtBasePath  string           `toml:"wt_base_path,omitempty"`

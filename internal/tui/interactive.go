@@ -2,12 +2,14 @@ package tui
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 type step int
@@ -65,7 +67,8 @@ func NewInteractiveModel(
 	fi := textinput.New()
 	fi.Placeholder = "type to filter..."
 	fi.CharLimit = 128
-	fi.Width = 30
+	_, _, _, leftCW, _ := slotSelectLayout(0)
+	fi.Width = max(8, leftCW)
 
 	filtered := make([]slot.Slot, len(slots))
 	copy(filtered, slots)
@@ -97,6 +100,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		_, _, _, leftCW, _ := slotSelectLayout(msg.Width)
+		m.filterInput.Width = max(8, leftCW)
 		return m, nil
 	case logLoadedMsg:
 		if len(m.filteredSlots) > 0 && m.filteredSlots[m.cursor].Path == msg.slotPath {
@@ -266,27 +271,13 @@ func (m Model) View() string {
 }
 
 func (m Model) viewSlotSelect() string {
-	totalWidth := m.width
-	if totalWidth == 0 {
-		totalWidth = 88
-	}
+	innerWidth, leftWidth, rightWidth, leftContentW, rightContentW := slotSelectLayout(m.width)
 
-	// Outer: RoundedBorder l+r (2) + Padding l+r (2) = 4 overhead
-	innerWidth := totalWidth - 4
-	// Left pane gets 1 char left padding; │ separator = 1 char
-	leftPad := 1
-	leftWidth := innerWidth * 2 / 5
-	leftContentWidth := leftWidth - leftPad
-	rightWidth := innerWidth - leftWidth - 1
-	if rightWidth < 10 {
-		rightWidth = 10
-	}
-
-	// Render each pane as a fixed-width block.
-	// lipgloss guarantees every output line is padded to exactly the specified width,
-	// and long lines wrap within the pane rather than overflowing into the other pane.
-	leftBlock := lipgloss.NewStyle().Width(leftContentWidth).PaddingLeft(leftPad).Render(m.buildLeftPane())
-	rightBlock := lipgloss.NewStyle().Width(rightWidth).Render(m.buildRightPane(rightWidth))
+	// Left and right columns must be built as one physical terminal row per logical UI row.
+	// lipgloss Width + word wrap on either side adds extra lines and breaks index-pairing with
+	// the │ separator (left wrap was the main cause of “missing” borders in the screenshot).
+	leftBlock := m.buildLeftPane(leftContentW, leftWidth)
+	rightBlock := m.buildRightPane(rightContentW, rightWidth)
 
 	leftLines := strings.Split(leftBlock, "\n")
 	rightLines := strings.Split(rightBlock, "\n")
@@ -311,39 +302,65 @@ func (m Model) viewSlotSelect() string {
 
 	// "git slot" title as first content line inside the box
 	titleLine := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5")).Render("git slot")
+	titleW := ansi.StringWidth(titleLine)
+	if pad := innerWidth - titleW; pad > 0 {
+		titleLine += strings.Repeat(" ", pad)
+	}
 	body := titleLine + "\n" + strings.Join(rows, "\n")
 
+	// Do NOT set Width(innerWidth) here: lipgloss applies cellbuf.Wrap to the whole body at
+	// (width - horizontal padding). Our grid rows are already innerWidth cells wide, which is
+	// wider than that wrap limit, so every row gets hard-split and the │ layout shatters
+	// (exactly the broken copy-paste the user saw).
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("5")).
 		Padding(0, 1).
-		Width(innerWidth).
 		Render(body)
 }
 
-func (m Model) buildLeftPane() string {
-	var b strings.Builder
+func (m Model) buildLeftPane(contentWidth int, leftColWidth int) string {
+	if leftColWidth <= 0 {
+		return ""
+	}
+	row := func(s string) string {
+		return formatGridColumnLine(s, contentWidth, leftColWidth)
+	}
+	blank := strings.Repeat(" ", leftColWidth)
+
 	prompt := render(StyleSelected, "Select a slot:", m.noColor)
-	b.WriteString(prompt + "\n\n")
-
-	b.WriteString(m.filterInput.View())
-	b.WriteString("\n\n")
-
-	for i, s := range m.filteredSlots {
-		b.WriteString(renderSlotItem(s, i == m.cursor, m.noColor) + "\n")
+	filterLine := strings.ReplaceAll(m.filterInput.View(), "\r\n", "\n")
+	if i := strings.IndexByte(filterLine, '\n'); i >= 0 {
+		filterLine = filterLine[:i]
 	}
 
-	b.WriteString("\n↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit")
-	return b.String()
+	lines := []string{
+		row(prompt),
+		blank,
+		row(filterLine),
+		blank,
+	}
+	for i, s := range m.filteredSlots {
+		lines = append(lines, row(renderSlotItem(s, i == m.cursor, m.noColor)))
+	}
+	lines = append(lines, blank)
+	help := "↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit"
+	lines = append(lines, row(help))
+	return strings.Join(lines, "\n")
 }
 
-func (m Model) buildRightPane(_ int) string {
+func (m Model) buildRightPane(contentWidth int, rightColWidth int) string {
+	blank := strings.Repeat(" ", rightColWidth)
+	row := func(s string) string {
+		return formatGridColumnLine(s, contentWidth, rightColWidth)
+	}
+
 	if len(m.filteredSlots) == 0 {
-		return "(empty)"
+		return row("(empty)")
 	}
 	s := m.filteredSlots[m.cursor]
 	if s.State != slot.SlotActive {
-		return "(empty)"
+		return row("(empty)")
 	}
 
 	icon := ""
@@ -352,12 +369,85 @@ func (m Model) buildRightPane(_ int) string {
 	}
 	slotLabel := render(StyleSelected, icon+s.Name, m.noColor)
 	branchLabel := render(StyleBranch, "  "+s.Branch, m.noColor)
-	title := slotLabel + branchLabel
+	header := slotLabel + branchLabel
 
 	if len(m.rightPane) == 0 {
-		return title + "\n\nLoading..."
+		return strings.Join([]string{row(header), blank, blank, row("Loading...")}, "\n")
 	}
-	return title + "\n\n" + strings.Join(m.rightPane, "\n")
+
+	out := []string{row(header), blank, blank}
+	for _, line := range m.rightPane {
+		out = append(out, row(line))
+	}
+	return strings.Join(out, "\n")
+}
+
+// formatGridColumnLine is one physical row of a split-pane column: exactly colWidth
+// terminal cells (one gutter space after │ + truncated text padded to contentWidth).
+func formatGridColumnLine(line string, contentWidth int, colWidth int) string {
+	if colWidth <= 0 {
+		return ""
+	}
+	if contentWidth <= 0 {
+		return strings.Repeat(" ", colWidth)
+	}
+	t := truncatePaneLine(line, contentWidth)
+	s := " " + t
+	w := ansi.StringWidth(s)
+	if w < colWidth {
+		s += strings.Repeat(" ", colWidth-w)
+	}
+	return s
+}
+
+// goldenRatio is φ (1.618…). Left column (slots + branches) is the larger segment:
+// leftW : rightW ≈ φ : 1 over (inner − separator), i.e. left gets φ/(1+φ) ≈ 61.8% of that space.
+const goldenRatio = 1.6180339887498948482045868364
+
+// slotSelectLayout computes inner and column widths for the slot-select view. termWidth 0
+// uses the same default as Bubble Tea before the first WindowSizeMsg (88 cols).
+func slotSelectLayout(termWidth int) (innerW, leftW, rightW, leftContentW, rightContentW int) {
+	if termWidth <= 0 {
+		termWidth = 88
+	}
+	innerW = termWidth - 4 // RoundedBorder l+r + Padding l+r
+	leftPad := 1
+	splittable := innerW - 1 // room for │ between columns
+	if splittable < 2 {
+		splittable = 2
+	}
+	// Smaller column = right (log preview); larger = left (slot list).
+	rightW = int(math.Round(float64(splittable) / (1 + goldenRatio)))
+	leftW = splittable - rightW
+	if rightW < 10 {
+		rightW = 10
+		leftW = splittable - rightW
+	}
+	if leftW < 1 {
+		leftW = 1
+		rightW = splittable - leftW
+	}
+	leftContentW = leftW - leftPad
+	if leftContentW < 1 {
+		leftContentW = 1
+	}
+	rightContentW = rightW - leftPad
+	if rightContentW < 8 {
+		rightContentW = 8
+	}
+	return
+}
+
+// truncatePaneLine limits one logical row to contentWidth terminal cells, preserving ANSI.
+func truncatePaneLine(s string, maxCells int) string {
+	if maxCells <= 0 {
+		return ""
+	}
+	tail := "..."
+	if ansi.StringWidth(tail) >= maxCells {
+		return ansi.Truncate(s, maxCells, "")
+	}
+	return ansi.Truncate(s, maxCells, tail)
 }
 
 func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {
