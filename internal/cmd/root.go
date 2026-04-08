@@ -77,6 +77,22 @@ type app struct {
 	wt       git.Worktree
 }
 
+// newInteractiveSlotModel builds the shared Bubble Tea model for slot selection
+// (bare `git-slot`, mount -i, shell without args).
+func (a *app) newInteractiveSlotModel(slots []slot.Slot, branches []string) tui.Model {
+	return tui.NewInteractiveModel(slots, branches, tui.IsNoColor(), a.wt.RecentLogs, a.cfg.TUILogLines(), a.cfg.TUILogFormat())
+}
+
+// listBranchesForTUI returns local branch names for branch completion in the TUI, or nil on error.
+func (a *app) listBranchesForTUI() []string {
+	branches, err := a.wt.ListBranches()
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: could not list branches: %v\n", err)
+		return nil
+	}
+	return branches
+}
+
 func bootstrap() (*app, error) {
 	detector := git.NewExecDetector("")
 	repoRoot, err := detector.RepoRoot()

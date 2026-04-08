@@ -101,14 +101,8 @@ func runInteractive(a *app, force, noShell bool, out io.Writer) error {
 		return nil
 	}
 
-	branches, err := a.wt.ListBranches()
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Warning: could not list branches: %v\n", err)
-		branches = nil
-	}
-
-	noColor := tui.IsNoColor()
-	model := tui.NewInteractiveModel(slots, branches, noColor, a.wt.RecentLogs, a.cfg.TUILogLines(), a.cfg.TUILogFormat())
+	branches := a.listBranchesForTUI()
+	model := a.newInteractiveSlotModel(slots, branches)
 
 	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {
