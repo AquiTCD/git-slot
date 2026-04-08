@@ -43,6 +43,7 @@ func TestNewInteractiveModel(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	assert.Equal(t, 0, m.cursor)
 	assert.Equal(t, stepSlotSelect, m.step)
+	assert.Equal(t, filterFieldWidth(0), m.filterInput.Width)
 }
 
 func TestSlotSelect_MoveDown(t *testing.T) {
@@ -269,6 +270,13 @@ func TestBuildRightPane_TruncatesLongLogLines(t *testing.T) {
 	assert.Contains(t, logLine, "...")
 }
 
+func TestTruncatePaneLine_MaxWidth(t *testing.T) {
+	long := strings.Repeat("a", 200)
+	out := truncatePaneLine(long, 12)
+	assert.LessOrEqual(t, ansi.StringWidth(out), 12)
+	assert.Contains(t, out, "...")
+}
+
 // ENH-P2-T7: view contains right pane content in split layout
 func TestView_SplitLayout_ContainsRightPane(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
@@ -279,38 +287,11 @@ func TestView_SplitLayout_ContainsRightPane(t *testing.T) {
 	assert.Contains(t, view, "Select a slot:")
 }
 
-func TestSlotSelectLayout_DefaultTermWidth(t *testing.T) {
-	inner, left, right, leftCW, rightCW := slotSelectLayout(0)
-	assert.Equal(t, 84, inner)
-	// Golden split: splittable 83 → left ~51, right ~32 (φ : 1), plus │ = 84
-	assert.Equal(t, 51, left)
-	assert.Equal(t, 32, right)
-	assert.Equal(t, 50, leftCW)
-	assert.Equal(t, 31, rightCW)
-}
-
-// Split-pane rows must be exactly left+1+right = inner terminal cells or the │ column breaks.
-func TestSplitPane_ComposedRowsMatchInnerWidth(t *testing.T) {
-	inner, leftW, rightW, leftCW, rightCW := slotSelectLayout(120)
+func TestWindowSizeMsg_SyncsFilterInputWidth(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
-	m.width = 120
-	leftBlock := m.buildLeftPane(leftCW, leftW)
-	rightBlock := m.buildRightPane(rightCW, rightW)
-	leftLines := strings.Split(leftBlock, "\n")
-	rightLines := strings.Split(rightBlock, "\n")
-	h := max(len(leftLines), len(rightLines))
-	sepW := ansi.StringWidth("│")
-	for len(leftLines) < h {
-		leftLines = append(leftLines, strings.Repeat(" ", leftW))
-	}
-	for len(rightLines) < h {
-		rightLines = append(rightLines, strings.Repeat(" ", rightW))
-	}
-	for i := 0; i < h; i++ {
-		row := leftLines[i] + "│" + rightLines[i]
-		assert.Equal(t, inner, ansi.StringWidth(row), "row %d", i)
-		assert.Equal(t, leftW, ansi.StringWidth(leftLines[i]))
-		assert.Equal(t, rightW, ansi.StringWidth(rightLines[i]))
-		assert.Equal(t, sepW, 1)
-	}
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m2, ok := updated.(Model)
+	require.True(t, ok)
+	assert.Equal(t, 120, m2.width)
+	assert.Equal(t, filterFieldWidth(120), m2.filterInput.Width)
 }

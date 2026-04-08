@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
@@ -67,8 +66,7 @@ func NewInteractiveModel(
 	fi := textinput.New()
 	fi.Placeholder = "type to filter..."
 	fi.CharLimit = 128
-	_, _, _, leftCW, _ := slotSelectLayout(0)
-	fi.Width = max(8, leftCW)
+	fi.Width = filterFieldWidth(0)
 
 	filtered := make([]slot.Slot, len(slots))
 	copy(filtered, slots)
@@ -100,8 +98,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		_, _, _, leftCW, _ := slotSelectLayout(msg.Width)
-		m.filterInput.Width = max(8, leftCW)
+		m.filterInput.Width = filterFieldWidth(msg.Width)
 		return m, nil
 	case logLoadedMsg:
 		if len(m.filteredSlots) > 0 && m.filteredSlots[m.cursor].Path == msg.slotPath {
@@ -271,39 +268,21 @@ func (m Model) View() string {
 }
 
 func (m Model) viewSlotSelect() string {
-	innerWidth, leftWidth, rightWidth, leftContentW, rightContentW := slotSelectLayout(m.width)
+	lay := computeSlotSelectLayout(m.width)
 
 	// Left and right columns must be built as one physical terminal row per logical UI row.
 	// lipgloss Width + word wrap on either side adds extra lines and breaks index-pairing with
 	// the │ separator (left wrap was the main cause of “missing” borders in the screenshot).
-	leftBlock := m.buildLeftPane(leftContentW, leftWidth)
-	rightBlock := m.buildRightPane(rightContentW, rightWidth)
-
-	leftLines := strings.Split(leftBlock, "\n")
-	rightLines := strings.Split(rightBlock, "\n")
-
-	// Pad both sides to equal height so │ runs the full length
-	height := max(len(leftLines), len(rightLines))
-	emptyLeft := strings.Repeat(" ", leftWidth)
-	emptyRight := strings.Repeat(" ", rightWidth)
-	for len(leftLines) < height {
-		leftLines = append(leftLines, emptyLeft)
-	}
-	for len(rightLines) < height {
-		rightLines = append(rightLines, emptyRight)
-	}
+	leftBlock := m.buildLeftPane(lay.LeftContent, lay.Left)
+	rightBlock := m.buildRightPane(lay.RightContent, lay.Right)
 
 	sep := lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("│")
-
-	rows := make([]string, height)
-	for i := range leftLines {
-		rows[i] = leftLines[i] + sep + rightLines[i]
-	}
+	rows := joinSplitPaneRows(leftBlock, rightBlock, sep, lay)
 
 	// "git slot" title as first content line inside the box
 	titleLine := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5")).Render("git slot")
 	titleW := ansi.StringWidth(titleLine)
-	if pad := innerWidth - titleW; pad > 0 {
+	if pad := lay.Inner - titleW; pad > 0 {
 		titleLine += strings.Repeat(" ", pad)
 	}
 	body := titleLine + "\n" + strings.Join(rows, "\n")
@@ -398,44 +377,6 @@ func formatGridColumnLine(line string, contentWidth int, colWidth int) string {
 		s += strings.Repeat(" ", colWidth-w)
 	}
 	return s
-}
-
-// goldenRatio is φ (1.618…). Left column (slots + branches) is the larger segment:
-// leftW : rightW ≈ φ : 1 over (inner − separator), i.e. left gets φ/(1+φ) ≈ 61.8% of that space.
-const goldenRatio = 1.6180339887498948482045868364
-
-// slotSelectLayout computes inner and column widths for the slot-select view. termWidth 0
-// uses the same default as Bubble Tea before the first WindowSizeMsg (88 cols).
-func slotSelectLayout(termWidth int) (innerW, leftW, rightW, leftContentW, rightContentW int) {
-	if termWidth <= 0 {
-		termWidth = 88
-	}
-	innerW = termWidth - 4 // RoundedBorder l+r + Padding l+r
-	leftPad := 1
-	splittable := innerW - 1 // room for │ between columns
-	if splittable < 2 {
-		splittable = 2
-	}
-	// Smaller column = right (log preview); larger = left (slot list).
-	rightW = int(math.Round(float64(splittable) / (1 + goldenRatio)))
-	leftW = splittable - rightW
-	if rightW < 10 {
-		rightW = 10
-		leftW = splittable - rightW
-	}
-	if leftW < 1 {
-		leftW = 1
-		rightW = splittable - leftW
-	}
-	leftContentW = leftW - leftPad
-	if leftContentW < 1 {
-		leftContentW = 1
-	}
-	rightContentW = rightW - leftPad
-	if rightContentW < 8 {
-		rightContentW = 8
-	}
-	return
 }
 
 // truncatePaneLine limits one logical row to contentWidth terminal cells, preserving ANSI.
