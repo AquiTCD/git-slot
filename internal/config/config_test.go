@@ -203,6 +203,16 @@ this is = not valid`)
 	assert.ErrorIs(t, err, ErrConfigParse)
 }
 
+func TestTUILogFormat_DefaultWhenUnset(t *testing.T) {
+	c := &Config{}
+	assert.Equal(t, defaultLogFormat, c.TUILogFormat())
+}
+
+func TestTUILogFormat_CustomWhenSet(t *testing.T) {
+	c := &Config{TUI: TUIConfig{LogFormat: "%h %s"}}
+	assert.Equal(t, "%h %s", c.TUILogFormat())
+}
+
 func TestConfig_FindSlot(t *testing.T) {
 	cfg := &Config{
 		Slots: []SlotDefinition{

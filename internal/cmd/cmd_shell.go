@@ -189,9 +189,7 @@ func selectSlotInteractive(a *app) (string, error) {
 		return "", fmt.Errorf("interactive mode requires a TTY")
 	}
 
-	var branches []string
-	noColor := tui.IsNoColor()
-	model := tui.NewInteractiveModel(activeSlots, branches, noColor, a.wt.RecentLogs, a.cfg.TUILogLines(), a.cfg.TUILogFormat())
+	model := a.newInteractiveSlotModel(activeSlots, nil)
 
 	m, aborted, err := runTUI[tui.Model](model)
 	if err != nil {

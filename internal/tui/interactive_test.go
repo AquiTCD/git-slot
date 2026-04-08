@@ -1,10 +1,12 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,6 +43,7 @@ func TestNewInteractiveModel(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	assert.Equal(t, 0, m.cursor)
 	assert.Equal(t, stepSlotSelect, m.step)
+	assert.Equal(t, filterFieldWidth(0), m.filterInput.Width)
 }
 
 func TestSlotSelect_MoveDown(t *testing.T) {
@@ -186,8 +189,10 @@ func TestFilter_CursorClamped(t *testing.T) {
 func TestRightPane_EmptySlot_ShowsEmptyLabel(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	// cursor starts at 0 = wood (empty)
-	rp := m.buildRightPane(80)
-	assert.Equal(t, "(empty)", rp)
+	rp := m.buildRightPane(80, 81)
+	assert.Contains(t, rp, "(empty)")
+	first := strings.Split(rp, "\n")[0]
+	assert.Equal(t, 81, ansi.StringWidth(first))
 }
 
 // ENH-P2-T2: active slot with loaded logs => right pane shows those lines
@@ -199,7 +204,7 @@ func TestRightPane_ActiveSlot_ShowsLogs(t *testing.T) {
 	m := NewInteractiveModel(testSlots(), nil, true, fetcher, 5, "%h %s")
 	m.cursor = 1 // fire (active)
 	m.rightPane = logs
-	rp := m.buildRightPane(80)
+	rp := m.buildRightPane(80, 81)
 	assert.Contains(t, rp, "abc1234 feat: add auth")
 	assert.Contains(t, rp, "def5678 fix: null pointer")
 }
@@ -233,7 +238,7 @@ func TestLogLoadedMsg_StaleMsg_DoesNotUpdateRightPane(t *testing.T) {
 func TestRightPane_ActiveSlot_LoadingState(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	m.cursor = 1 // fire (active), rightPane is nil
-	rp := m.buildRightPane(80)
+	rp := m.buildRightPane(80, 81)
 	assert.Contains(t, rp, "Loading...")
 }
 
@@ -252,6 +257,26 @@ func TestFetchLogsForCurrent_NoFetcher_ReturnsNil(t *testing.T) {
 	assert.Nil(t, cmd)
 }
 
+// Long log lines are truncated to one row (ellipsis) at the given content width.
+func TestBuildRightPane_TruncatesLongLogLines(t *testing.T) {
+	m := newInteractiveTestModel(testSlots(), true)
+	m.cursor = 1
+	m.rightPane = []string{"2026-01-01 " + strings.Repeat("x", 200)}
+	rp := m.buildRightPane(24, 25)
+	lines := strings.Split(rp, "\n")
+	require.GreaterOrEqual(t, len(lines), 3)
+	logLine := lines[len(lines)-1]
+	assert.Equal(t, 25, ansi.StringWidth(logLine), "each right-pane row must match column width for layout")
+	assert.Contains(t, logLine, "...")
+}
+
+func TestTruncatePaneLine_MaxWidth(t *testing.T) {
+	long := strings.Repeat("a", 200)
+	out := truncatePaneLine(long, 12)
+	assert.LessOrEqual(t, ansi.StringWidth(out), 12)
+	assert.Contains(t, out, "...")
+}
+
 // ENH-P2-T7: view contains right pane content in split layout
 func TestView_SplitLayout_ContainsRightPane(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
@@ -260,4 +285,13 @@ func TestView_SplitLayout_ContainsRightPane(t *testing.T) {
 	view := m.View()
 	assert.Contains(t, view, "abc feat: add x")
 	assert.Contains(t, view, "Select a slot:")
+}
+
+func TestWindowSizeMsg_SyncsFilterInputWidth(t *testing.T) {
+	m := newInteractiveTestModel(testSlots(), true)
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m2, ok := updated.(Model)
+	require.True(t, ok)
+	assert.Equal(t, 120, m2.width)
+	assert.Equal(t, filterFieldWidth(120), m2.filterInput.Width)
 }
