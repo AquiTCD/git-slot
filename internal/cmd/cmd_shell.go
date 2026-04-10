@@ -67,28 +67,13 @@ func runShell(cmd *cobra.Command, args []string) error {
 }
 
 func launchSlotShell(a *app, slotName string) error {
-	st, err := a.mgr.Status(slotName)
+	st, info, userEnv, err := loadActiveSlotContext(a, slotName)
 	if err != nil {
 		return err
-	}
-	if st.State == slot.SlotEmpty {
-		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
 	}
 
 	printHintSlotShell()
 
-	slotDef := a.cfg.FindSlot(slotName)
-	var userEnv map[string]string
-	if slotDef != nil {
-		userEnv = slotDef.Env
-	}
-
-	info := slotenv.SlotInfo{
-		SlotName: slotName,
-		SlotPath: st.Path,
-		Branch:   st.Branch,
-		RepoRoot: a.repoRoot,
-	}
 	slotVars := slotenv.BuildSlotEnv(info, userEnv)
 	mergedEnv := slotenv.MergeEnvWithOS(os.Environ(), slotVars)
 

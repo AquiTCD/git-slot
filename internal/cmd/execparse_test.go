@@ -51,3 +51,17 @@ func TestExecWantsHelp(t *testing.T) {
 	assert.False(t, execWantsHelp([]string{"git-slot", "exec", "work", "--", "npm", "--help"}))
 	assert.False(t, execWantsHelp([]string{"git-slot", "exec", "--", "sh", "-c", "exit 0"}))
 }
+
+func TestExecArgumentSegment(t *testing.T) {
+	seg, ok := execArgumentSegment([]string{"git-slot", "exec", "a", "b"})
+	require.True(t, ok)
+	assert.Equal(t, []string{"a", "b"}, seg)
+
+	_, ok = execArgumentSegment([]string{"git-slot", "list"})
+	assert.False(t, ok)
+
+	// Any argv token "exec" after the program name is treated as the subcommand (same as parseExecArgv).
+	seg, ok = execArgumentSegment([]string{"git-slot", "x", "exec", "y"})
+	require.True(t, ok)
+	assert.Equal(t, []string{"y"}, seg)
+}

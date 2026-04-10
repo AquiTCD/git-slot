@@ -6,23 +6,27 @@ import (
 	"github.com/AquiTCD/git-slot/internal/config"
 )
 
+// execArgumentSegment returns argv arguments that follow the "exec" subcommand.
+// ok is false when argv does not contain an "exec" token (scan skips index 0, the program name).
+func execArgumentSegment(argv []string) (seg []string, ok bool) {
+	for i := 1; i < len(argv); i++ {
+		if argv[i] == "exec" {
+			return argv[i+1:], true
+		}
+	}
+	return nil, false
+}
+
 // parseExecArgv parses arguments after the git-slot binary name.
 // Expected forms: exec -- <command>...  or  exec <slot> -- <command>...
 func parseExecArgv(argv []string, cfg *config.Config) (slotExplicit bool, slotName string, cmdArgs []string, err error) {
 	if cfg == nil {
 		return false, "", nil, fmt.Errorf("internal error: nil config")
 	}
-	execIdx := -1
-	for i := 1; i < len(argv); i++ {
-		if argv[i] == "exec" {
-			execIdx = i
-			break
-		}
-	}
-	if execIdx < 0 {
+	seg, found := execArgumentSegment(argv)
+	if !found {
 		return false, "", nil, fmt.Errorf("exec subcommand not found in argv")
 	}
-	seg := argv[execIdx+1:]
 	dash := -1
 	for i, a := range seg {
 		if a == "--" {
