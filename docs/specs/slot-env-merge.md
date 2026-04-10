@@ -88,7 +88,8 @@
 
 ### 案 E: git slot exec でだけ env を注入（ファイルに頼らない）
 
-- **やること**: **`git slot exec <slot> -- <cmd>`** のように、git-slot が子プロセスを起動するときに、GSL_* と設定の env を `cmd.Env` で渡す。マージは「既存の .env はアプリが読む + プロセスには git-slot が渡した env が上乗せ」で、OS の env の後勝ちで実現。
+- **実装状況**: **`git slot exec`** および **`git slot which`** として実装済み。スロット省略時は `which` と同じく `git rev-parse --show-toplevel` でスロットを決定する。
+- **やること**: **`git slot exec <slot> -- <cmd>`** のように、git-slot が子プロセスを起動するときに、GSL_* と設定の env を `cmd.Env` で渡す。マージは「既存の .env はアプリが読む + プロセスには git-slot が渡した env が上乗せ」で、OS の env の後勝ちで実現。対話シェル用の `GSL_SHELL_SESSION` は `exec` の子には付けない（`git slot shell` との区別）。
 - **プロジェクト側**: 変更不要。.env はアプリが従来どおり読む。スロットで動かすときだけ `git slot exec` を使う。
 - **長所**: direnv 不要。.envrc を触らない。プロジェクトが git-slot に依存しない。
 - **短所**: 「cd してから npm start」では効かない。必ず `git slot exec` 経由で起動する必要がある。

@@ -88,7 +88,7 @@ func writeShWrapper(w io.Writer) error {
   # 'shell' subcommand uses syscall.Exec and must not run inside $();
   # delegate directly so the current process is replaced.
   case "$1" in
-    shell) command git-slot "$@"; return $? ;;
+    shell|exec) command git-slot "$@"; return $? ;;
   esac
   local result
   # Force color output even when captured in a variable,
@@ -118,7 +118,7 @@ func writeFishWrapper(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `function gsl
   # 'shell' subcommand uses syscall.Exec and must not run inside ();
   # delegate directly so the current process is replaced.
-  if test (count $argv) -ge 1; and test "$argv[1]" = "shell"
+  if test (count $argv) -ge 1; and contains $argv[1] shell exec
     command git-slot $argv
     return $status
   end
