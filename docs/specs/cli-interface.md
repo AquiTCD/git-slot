@@ -76,6 +76,8 @@ git slot --init [--global]        # 設定ファイルのテンプレートを�
 git slot --version                # バージョン情報を表示
 git slot --help                   # ヘルプを表示
 git slot shell [slot]             # スロット内でサブシェルを起動
+git slot which                    # カレント worktree のスロット名を出力
+git slot exec [slot] -- <cmd>     # スロット環境でコマンドを 1 回実行
 ```
 
 #### フラグ一覧

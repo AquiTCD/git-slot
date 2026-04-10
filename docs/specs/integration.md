@@ -132,6 +132,10 @@ sequenceDiagram
 | スロットシェル内で `git slot set <同じスロット>` | 許可（ブランチ切り替えのみ） |
 | スロットシェル内で `git slot set <別スロット>` | エラー |
 | スロットシェル内で `git slot`（TUI） | エラー（launch_shell=true 時） |
+| スロットシェル内で `git slot exec <別スロット> -- …` | エラー |
+| スロットシェル内で `git slot exec -- …`（カレントスロットの cwd） | 許可 |
+
+`git slot exec` は一発コマンド用であり、子プロセスには `GSL_SHELL_SESSION` を設定しない。スロットシェル内から実行する場合、親が設定した `GSL_SHELL_SESSION` は相続されうる。
 
 ### 3.4 Error Handling
 

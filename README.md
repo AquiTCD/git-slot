@@ -284,6 +284,8 @@ gwq のディレクトリ規約（`~/worktrees/{host}/{owner}/{repo}/`）に準�
 | `git slot hook [-g]` | フック設定の TUI を起動します（`-g` でグローバル） |
 | `git slot root` | リポジトリルートのパスを出力します（`gsl root` で cd） |
 | `git slot shell [slot]` | スロット内でサブシェルを起動します |
+| `git slot which` | カレント git worktree に対応するスロット名を 1 行で出力します |
+| `git slot exec [slot] -- <cmd> [args...]` | スロットの worktree を cwd に、`GSL_*` と `[[slots]] env` を載せてコマンドを 1 回実行します（`GSL_SHELL_SESSION` は付きません） |
 | `git slot install-skill [dir]`| AIエージェント向けガイドライン（skill）を出力・インストールします |
 | `git slot -v, --version` | バージョン情報を表示します |
 

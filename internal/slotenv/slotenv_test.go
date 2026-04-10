@@ -66,6 +66,35 @@ func TestBuildSlotEnv(t *testing.T) {
 	})
 }
 
+func TestBuildSlotExecEnv(t *testing.T) {
+	t.Run("no GSL_SHELL_SESSION", func(t *testing.T) {
+		env := BuildSlotExecEnv(SlotInfo{
+			SlotName: "main-work",
+			SlotPath: "/path/to/slots/main-work",
+			Branch:   "feat/x",
+			RepoRoot: "/path/to/repo",
+		}, nil)
+
+		assert.Contains(t, env, "GSL_SLOT_NAME=main-work")
+		assert.Contains(t, env, "GSL_SLOT_PATH=/path/to/slots/main-work")
+		assert.Contains(t, env, "GSL_BRANCH=feat/x")
+		assert.Contains(t, env, "GSL_REPO_ROOT=/path/to/repo")
+		assert.NotContains(t, env, "GSL_SHELL_SESSION")
+	})
+
+	t.Run("user env same rules as shell", func(t *testing.T) {
+		env := BuildSlotExecEnv(SlotInfo{
+			SlotName: "s1",
+			SlotPath: "/slots/s1",
+			Branch:   "main",
+			RepoRoot: "/repo",
+		}, map[string]string{"PORT": "3001"})
+
+		assert.Contains(t, env, "PORT=3001")
+		require.Len(t, env, 5)
+	})
+}
+
 func TestMergeEnvWithOS(t *testing.T) {
 	osEnv := []string{
 		"HOME=/home/user",

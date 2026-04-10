@@ -74,6 +74,8 @@ type app struct {
 	mgr      slot.SlotManager
 	cfg      *config.Config
 	repoRoot string
+	basePath string
+	repoName string
 	wt       git.Worktree
 }
 
@@ -130,6 +132,8 @@ func bootstrap() (*app, error) {
 		mgr:      slot.NewManager(cfg, basePath, repoName, wt),
 		cfg:      cfg,
 		repoRoot: repoRoot,
+		basePath: basePath,
+		repoName: repoName,
 		wt:       wt,
 	}, nil
 }

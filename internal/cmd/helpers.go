@@ -32,6 +32,25 @@ func checkShellNestingForSet(targetSlot string) error {
 	return ErrShellNested
 }
 
+// checkExecAllowedInSlotShell enforces that from an interactive slot shell, exec may only
+// target the current slot (by name or by cwd resolution).
+func checkExecAllowedInSlotShell(explicitSlot bool, slotArg, resolvedSlotName string) error {
+	if !isInsideSlotShell() {
+		return nil
+	}
+	current := os.Getenv("GSL_SLOT_NAME")
+	if explicitSlot {
+		if slotArg != current {
+			return fmt.Errorf("%w: from a slot shell, only current slot %q is allowed (got %q)", ErrShellNested, current, slotArg)
+		}
+		return nil
+	}
+	if resolvedSlotName != current {
+		return fmt.Errorf("%w: cwd resolves to slot %q but this shell session is for slot %q", ErrShellNested, resolvedSlotName, current)
+	}
+	return nil
+}
+
 func wantShell(cfg *config.Config, noShell bool) bool {
 	return cfg.LaunchShell != nil && *cfg.LaunchShell && !noShell
 }
