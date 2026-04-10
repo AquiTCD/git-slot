@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 
 	"github.com/AquiTCD/git-slot/internal/errutil"
-	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/slotenv"
 	"github.com/spf13/cobra"
 )
@@ -53,17 +51,11 @@ func runExec(cmd *cobra.Command, _ []string) error {
 
 // execWantsHelp is true for `git slot exec --help` / `-h` before `--` (not npm --help).
 func execWantsHelp(argv []string) bool {
-	execIdx := -1
-	for i := 1; i < len(argv); i++ {
-		if argv[i] == "exec" {
-			execIdx = i
-			break
-		}
-	}
-	if execIdx < 0 {
+	seg, ok := execArgumentSegment(argv)
+	if !ok {
 		return false
 	}
-	for _, a := range argv[execIdx+1:] {
+	for _, a := range seg {
 		if a == "--" {
 			return false
 		}
@@ -85,32 +77,15 @@ func runExecFromApp(a *app, argv []string) error {
 	} else {
 		slotName, err = a.slotNameFromGitCWD()
 		if err != nil {
-			if errors.Is(err, slot.ErrNotASlotWorktree) {
-				return errutil.NewExitError("not inside a configured git-slot worktree; specify a slot before '--'", 1)
-			}
-			return err
+			return exitIfNotSlotWorktree(err, "not inside a configured git-slot worktree; specify a slot before '--'")
 		}
 	}
 	if err := checkExecAllowedInSlotShell(explicit, slotArg, slotName); err != nil {
 		return err
 	}
-	st, err := a.mgr.Status(slotName)
+	st, info, userEnv, err := loadActiveSlotContext(a, slotName)
 	if err != nil {
 		return err
-	}
-	if st.State == slot.SlotEmpty {
-		return fmt.Errorf("slot '%s' is empty; mount a branch first with 'git slot set'", slotName)
-	}
-	slotDef := a.cfg.FindSlot(slotName)
-	var userEnv map[string]string
-	if slotDef != nil {
-		userEnv = slotDef.Env
-	}
-	info := slotenv.SlotInfo{
-		SlotName: slotName,
-		SlotPath: st.Path,
-		Branch:   st.Branch,
-		RepoRoot: a.repoRoot,
 	}
 	merged := slotenv.MergeEnvWithOS(os.Environ(), slotenv.BuildSlotExecEnv(info, userEnv))
 	exeCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
@@ -119,7 +94,10 @@ func runExecFromApp(a *app, argv []string) error {
 	exeCmd.Stdin = os.Stdin
 	exeCmd.Stdout = os.Stdout
 	exeCmd.Stderr = os.Stderr
-	err = execRunHook(exeCmd)
+	return runExecExit(execRunHook(exeCmd))
+}
+
+func runExecExit(err error) error {
 	if err == nil {
 		return nil
 	}

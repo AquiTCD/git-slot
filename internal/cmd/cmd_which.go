@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/AquiTCD/git-slot/internal/errutil"
 	"github.com/AquiTCD/git-slot/internal/git"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/spf13/cobra"
@@ -40,10 +38,7 @@ func runWhich(cmd *cobra.Command, _ []string) error {
 	}
 	name, err := a.slotNameFromGitCWD()
 	if err != nil {
-		if errors.Is(err, slot.ErrNotASlotWorktree) {
-			return errutil.NewExitError("not inside a configured git-slot worktree", 1)
-		}
-		return err
+		return exitIfNotSlotWorktree(err, "not inside a configured git-slot worktree")
 	}
 	_, err = fmt.Fprintln(cmd.OutOrStdout(), name)
 	return err
