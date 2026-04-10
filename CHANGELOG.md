@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.13.1] - 2026-04-10
+
+### Changed
+
+- Embedded AI skill (`git slot install-skill`): slot-scoped tasks now **require** terminal builds/tests/scripts to run via **`git slot exec`** (with anti-escape rules: no bare `npm` / `go` / `make` after `cd` alone); `cd` is clarified as for file paths, not a substitute for `exec`.
+- `cmd`: shared `loadActiveSlotContext`, `execArgumentSegment` (exec argv / `--help`), `exitIfNotSlotWorktree`, and `runExecExit`; shell/exec/which use the helpers.
+
 ## [0.13.0] - 2026-04-10
 
 ### Added
@@ -371,6 +378,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.13.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.13.1
 [0.13.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.13.0
 [0.12.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.12.0
 [0.11.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.11.0
