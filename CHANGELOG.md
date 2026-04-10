@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] - 2026-04-10
+
+### Added
+
+- `git slot which`: print the configured slot name for the current git worktree root (`git rev-parse --show-toplevel`).
+- `git slot exec`: run a one-shot command with the slot worktree as cwd and `GSL_*` plus `[[slots.env]]` via `BuildSlotExecEnv` (no `GSL_SHELL_SESSION`). Optional slot name before `--`, or infer the slot like `which` when omitted. From an interactive slot shell, only the current slot is allowed.
+- `slotenv.BuildSlotExecEnv` and `slot.SlotNameForWorktreeRoot`.
+- `gsl` wrapper forwards `exec` like `shell` (avoid command substitution for the subprocess).
+
+### Changed
+
+- Documentation and specs: `slot-env-merge` (case E), `integration`, `cli-interface`, README command table.
+
 ## [0.12.0] - 2026-04-08
 
 ### Fixed
@@ -358,6 +371,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.13.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.13.0
 [0.12.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.12.0
 [0.11.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.11.0
 [0.10.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.10.1
