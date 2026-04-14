@@ -5,11 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-04-14
+
+### Added
+
+- `internal/gslenv`: shared `GSL_FROM_WRAPPER` detection and env stripping for cmd and hook.
+- Interactive TUI: fixed-width **icon gutter** (grapheme-aware width via `go-runewidth` / `uniseg`) and **fzf-style** slot list (filter divider, selection bar, row highlight through branch only).
+
+### Changed
+
+- Interactive slot picker: single-column flow aligned with `git slot list` (no split-pane or log tail); `NewInteractiveModel(slots, branches, noColor)`.
+- `gsl` wrapper: sets `GSL_FROM_WRAPPER=1` on command-substitution calls so `launch_shell = true` still prints the worktree path for `cd`; variable is stripped before slot shell `exec` and omitted from hook subprocess env.
+- `go.mod`: `go-runewidth` and `rivo/uniseg` as direct dependencies.
+
+### Fixed
+
+- Lipgloss per-field resets clearing the selected-row background after the icon; row background is re-applied per head segment.
+
 ## [0.13.1] - 2026-04-10
 
 ### Changed
 
-- `gsl` wrapper: set `GSL_FROM_WRAPPER=1` on captured `git-slot` invocations so `launch_shell = true` still prints the worktree path for `cd` (TUI/set paths). Slot shells strip this variable before `exec`.
 - Embedded AI skill (`git slot install-skill`): slot-scoped tasks now **require** terminal builds/tests/scripts to run via **`git slot exec`** (with anti-escape rules: no bare `npm` / `go` / `make` after `cd` alone); `cd` is clarified as for file paths, not a substitute for `exec`.
 - `cmd`: shared `loadActiveSlotContext`, `execArgumentSegment` (exec argv / `--help`), `exitIfNotSlotWorktree`, and `runExecExit`; shell/exec/which use the helpers.
 
@@ -379,6 +395,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 [0.2.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.1.0
+[0.14.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.14.0
 [0.13.1]: https://github.com/AquiTCD/git-slot/releases/tag/v0.13.1
 [0.13.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.13.0
 [0.12.0]: https://github.com/AquiTCD/git-slot/releases/tag/v0.12.0
