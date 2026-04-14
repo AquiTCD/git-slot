@@ -76,6 +76,7 @@ func launchSlotShell(a *app, slotName string) error {
 
 	slotVars := slotenv.BuildSlotEnv(info, userEnv)
 	mergedEnv := slotenv.MergeEnvWithOS(os.Environ(), slotVars)
+	mergedEnv = stripWrapperExclusiveEnv(mergedEnv)
 
 	return execShell(st.Path, mergedEnv)
 }

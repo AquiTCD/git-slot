@@ -82,6 +82,8 @@ post_clear = ".git-slot/hooks/post-clear.sh"
 | `GSL_ACTION` | 実行中のアクション | `load` / `clear` |
 | `GSL_SHELL_SESSION` | スロットシェル内かどうか | `1`（シェル内のみ設定） |
 
+`gsl` シェルラッパーが `command substitution` 経由で `git-slot` を呼ぶときだけ、子プロセスに **`GSL_FROM_WRAPPER=1`** が付く。`launch_shell = true` でもこの経路では **ワークツリーパスを出力して cd する**ための内部フラグであり、スロットシェルやフックの子プロセス環境には載せない（`exec` / `sh -c` 前に除去する）。
+
 #### 実行ルール
 
 - フックスクリプトは実行権限（`chmod +x`）が必要
@@ -132,6 +134,7 @@ sequenceDiagram
 | スロットシェル内で `git slot set <同じスロット>` | 許可（ブランチ切り替えのみ） |
 | スロットシェル内で `git slot set <別スロット>` | エラー |
 | スロットシェル内で `git slot`（TUI） | エラー（launch_shell=true 時） |
+| スロットシェル内で `gsl`（TUI、`GSL_FROM_WRAPPER=1`） | `launch_shell` の自動シェルは抑止（cd 用）。TUI 自体は起動しうる |
 | スロットシェル内で `git slot exec <別スロット> -- …` | エラー |
 | スロットシェル内で `git slot exec -- …`（カレントスロットの cwd） | 許可 |
 
