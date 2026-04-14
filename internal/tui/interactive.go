@@ -7,8 +7,6 @@ import (
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
 )
 
 type step int
@@ -26,11 +24,6 @@ type Result struct {
 	CreateBranch bool
 }
 
-type logLoadedMsg struct {
-	slotPath string
-	lines    []string
-}
-
 type Model struct {
 	slots         []slot.Slot
 	filteredSlots []slot.Slot
@@ -42,22 +35,11 @@ type Model struct {
 	filterQuery   string
 	result        Result
 	noColor       bool
-	logFetcher    func(path string, n int, format string) ([]string, error)
-	logLines      int
-	logFormat     string
-	rightPane     []string
 	width         int
 	height        int
 }
 
-func NewInteractiveModel(
-	slots []slot.Slot,
-	branches []string,
-	noColor bool,
-	logFetcher func(path string, n int, format string) ([]string, error),
-	logLines int,
-	logFormat string,
-) Model {
+func NewInteractiveModel(slots []slot.Slot, branches []string, noColor bool) Model {
 	ti := textinput.New()
 	ti.Placeholder = "branch name (prefix with + to create new)"
 	ti.CharLimit = 256
@@ -79,9 +61,6 @@ func NewInteractiveModel(
 		input:         ti,
 		filterInput:   fi,
 		noColor:       noColor,
-		logFetcher:    logFetcher,
-		logLines:      logLines,
-		logFormat:     logFormat,
 	}
 
 	m.filterInput.Focus()
@@ -90,7 +69,7 @@ func NewInteractiveModel(
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.filterInput.Cursor.BlinkCmd(), m.fetchLogsForCurrent())
+	return m.filterInput.Cursor.BlinkCmd()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -99,11 +78,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.filterInput.Width = filterFieldWidth(msg.Width)
-		return m, nil
-	case logLoadedMsg:
-		if len(m.filteredSlots) > 0 && m.filteredSlots[m.cursor].Path == msg.slotPath {
-			m.rightPane = msg.lines
-		}
 		return m, nil
 	case tea.KeyMsg:
 		switch m.step {
@@ -124,13 +98,11 @@ func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "up", "ctrl+k":
 		if m.cursor > 0 {
 			m.cursor--
-			return m, m.fetchLogsForCurrent()
 		}
 		return m, nil
 	case "down", "ctrl+j":
 		if m.cursor < len(m.filteredSlots)-1 {
 			m.cursor++
-			return m, m.fetchLogsForCurrent()
 		}
 		return m, nil
 	case "enter":
@@ -143,34 +115,14 @@ func (m Model) updateSlotSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	newQuery := m.filterInput.Value()
 	if newQuery != m.filterQuery {
 		m.filterQuery = newQuery
-		m.applyFilter()
-		return m, tea.Batch(cmd, m.fetchLogsForCurrent())
+		m = m.applyFilter()
+		return m, cmd
 	}
 
 	return m, cmd
 }
 
-func (m Model) fetchLogsForCurrent() tea.Cmd {
-	if len(m.filteredSlots) == 0 || m.logFetcher == nil {
-		return nil
-	}
-	s := m.filteredSlots[m.cursor]
-	if s.State != slot.SlotActive {
-		return func() tea.Msg {
-			return logLoadedMsg{slotPath: s.Path, lines: nil}
-		}
-	}
-	fetcher := m.logFetcher
-	n := m.logLines
-	format := m.logFormat
-	path := s.Path
-	return func() tea.Msg {
-		lines, _ := fetcher(path, n, format)
-		return logLoadedMsg{slotPath: path, lines: lines}
-	}
-}
-
-func (m *Model) applyFilter() {
+func (m Model) applyFilter() Model {
 	if m.filterQuery == "" {
 		m.filteredSlots = make([]slot.Slot, len(m.slots))
 		copy(m.filteredSlots, m.slots)
@@ -189,6 +141,7 @@ func (m *Model) applyFilter() {
 	if m.cursor >= len(m.filteredSlots) {
 		m.cursor = max(0, len(m.filteredSlots)-1)
 	}
+	return m
 }
 
 func (m Model) selectCurrentSlot() (tea.Model, tea.Cmd) {
@@ -268,165 +221,40 @@ func (m Model) View() string {
 }
 
 func (m Model) viewSlotSelect() string {
-	lay := computeSlotSelectLayout(m.width)
+	filterLine := sanitizeTextInputFirstLine(m.filterInput.View())
 
-	// Left and right columns must be built as one physical terminal row per logical UI row.
-	// lipgloss Width + word wrap on either side adds extra lines and breaks index-pairing with
-	// the │ separator (left wrap was the main cause of “missing” borders in the screenshot).
-	leftBlock := m.buildLeftPane(lay.LeftContent, lay.Left)
-	rightBlock := m.buildRightPane(lay.RightContent, lay.Right)
+	maxName := maxSlotNameLen(m.filteredSlots)
 
-	sep := lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("│")
-	rows := joinSplitPaneRows(leftBlock, rightBlock, sep, lay)
-
-	// "git slot" title as first content line inside the box
-	titleLine := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5")).Render("git slot")
-	titleW := ansi.StringWidth(titleLine)
-	if pad := lay.Inner - titleW; pad > 0 {
-		titleLine += strings.Repeat(" ", pad)
-	}
-	body := titleLine + "\n" + strings.Join(rows, "\n")
-
-	// Do NOT set Width(innerWidth) here: lipgloss applies cellbuf.Wrap to the whole body at
-	// (width - horizontal padding). Our grid rows are already innerWidth cells wide, which is
-	// wider than that wrap limit, so every row gets hard-split and the │ layout shatters
-	// (exactly the broken copy-paste the user saw).
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("5")).
-		Padding(0, 1).
-		Render(body)
-}
-
-func (m Model) buildLeftPane(contentWidth int, leftColWidth int) string {
-	if leftColWidth <= 0 {
-		return ""
-	}
-	row := func(s string) string {
-		return formatGridColumnLine(s, contentWidth, leftColWidth)
-	}
-	blank := strings.Repeat(" ", leftColWidth)
-
-	prompt := render(StyleSelected, "Select a slot:", m.noColor)
-	filterLine := strings.ReplaceAll(m.filterInput.View(), "\r\n", "\n")
-	if i := strings.IndexByte(filterLine, '\n'); i >= 0 {
-		filterLine = filterLine[:i]
-	}
-
-	lines := []string{
-		row(prompt),
-		blank,
-		row(filterLine),
-		blank,
-	}
+	var b strings.Builder
+	b.WriteString(filterLine)
+	b.WriteByte('\n')
+	b.WriteString(RenderSlotFilterDivider(m.width, len(m.filteredSlots), len(m.slots), m.noColor))
+	b.WriteByte('\n')
 	for i, s := range m.filteredSlots {
-		lines = append(lines, row(renderSlotItem(s, i == m.cursor, m.noColor)))
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString(RenderInteractiveSlotLine(s, maxName, i == m.cursor, m.noColor))
 	}
-	lines = append(lines, blank)
-	help := "↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit"
-	lines = append(lines, row(help))
-	return strings.Join(lines, "\n")
+	b.WriteString("\n\n↑/↓ or ctrl+j/k: navigate  enter: select  esc: quit")
+	return b.String()
 }
 
-func (m Model) buildRightPane(contentWidth int, rightColWidth int) string {
-	blank := strings.Repeat(" ", rightColWidth)
-	row := func(s string) string {
-		return formatGridColumnLine(s, contentWidth, rightColWidth)
+// sanitizeTextInputFirstLine reduces bubbles textinput.View output to one display line
+// (first line only; CR/LF and stray newlines normalized) for use above the slot list.
+func sanitizeTextInputFirstLine(view string) string {
+	s := strings.ReplaceAll(view, "\r\n", "\n")
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		s = s[:i]
 	}
-
-	if len(m.filteredSlots) == 0 {
-		return row("(empty)")
-	}
-	s := m.filteredSlots[m.cursor]
-	if s.State != slot.SlotActive {
-		return row("(empty)")
-	}
-
-	icon := ""
-	if s.Icon != "" {
-		icon = s.Icon + " "
-	}
-	slotLabel := render(StyleSelected, icon+s.Name, m.noColor)
-	branchLabel := render(StyleBranch, "  "+s.Branch, m.noColor)
-	header := slotLabel + branchLabel
-
-	if len(m.rightPane) == 0 {
-		return strings.Join([]string{row(header), blank, blank, row("Loading...")}, "\n")
-	}
-
-	out := []string{row(header), blank, blank}
-	for _, line := range m.rightPane {
-		out = append(out, row(line))
-	}
-	return strings.Join(out, "\n")
-}
-
-// formatGridColumnLine is one physical row of a split-pane column: exactly colWidth
-// terminal cells (one gutter space after │ + truncated text padded to contentWidth).
-func formatGridColumnLine(line string, contentWidth int, colWidth int) string {
-	if colWidth <= 0 {
-		return ""
-	}
-	if contentWidth <= 0 {
-		return strings.Repeat(" ", colWidth)
-	}
-	t := truncatePaneLine(line, contentWidth)
-	s := " " + t
-	w := ansi.StringWidth(s)
-	if w < colWidth {
-		s += strings.Repeat(" ", colWidth-w)
-	}
-	return s
-}
-
-// truncatePaneLine limits one logical row to contentWidth terminal cells, preserving ANSI.
-func truncatePaneLine(s string, maxCells int) string {
-	if maxCells <= 0 {
-		return ""
-	}
-	tail := "..."
-	if ansi.StringWidth(tail) >= maxCells {
-		return ansi.Truncate(s, maxCells, "")
-	}
-	return ansi.Truncate(s, maxCells, tail)
-}
-
-func renderSlotItem(s slot.Slot, isSelected bool, noColor bool) string {
-	cursor := "  "
-	if isSelected {
-		cursor = render(StyleCursor, "> ", noColor)
-	}
-
-	name := s.Name
-	if isSelected {
-		name = render(StyleSelected, name, noColor)
-	} else {
-		name = render(StyleName, name, noColor)
-	}
-
-	icon := ""
-	if s.Icon != "" {
-		icon = s.Icon + " "
-	}
-
-	state := s.DisplayState()
-	stateTag := render(StateStyle(state), fmt.Sprintf("[%s]", state), noColor)
-
-	line := fmt.Sprintf("%s%s%s  %s", cursor, icon, name, stateTag)
-	if s.State == slot.SlotActive {
-		line += "  " + render(StyleBranch, s.Branch, noColor)
-	}
-	return line
+	return strings.ReplaceAll(strings.ReplaceAll(s, "\n", " "), "\r", " ")
 }
 
 func (m Model) viewBranchInput() string {
 	var b strings.Builder
 	selected := m.filteredSlots[m.cursor]
 
-	name := selected.Name
-	if selected.Icon != "" {
-		name = selected.Icon + " " + name
-	}
+	name := formatIconGutter(selected.Icon, m.noColor, false) + selected.Name
 
 	fmt.Fprintf(&b, "Slot: %s\n\n", name)
 	b.WriteString("Enter branch name (prefix with + to create new):\n\n")
