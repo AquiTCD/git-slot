@@ -90,3 +90,12 @@ func TestWrapper_ShellSubcommandBypass(t *testing.T) {
 		assert.Contains(t, out, "shell", "expected shell subcommand guard in %s wrapper", shell)
 	}
 }
+
+func TestWrapper_SetsGslFromWrapperForCapturedInvocations(t *testing.T) {
+	shells := []string{"zsh", "bash", "fish"}
+	for _, shell := range shells {
+		out, err := executeCommand("wrapper", shell)
+		require.NoError(t, err, "shell: %s", shell)
+		assert.Contains(t, out, "GSL_FROM_WRAPPER=1", "shell: %s", shell)
+	}
+}

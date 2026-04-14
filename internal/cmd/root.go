@@ -82,7 +82,7 @@ type app struct {
 // newInteractiveSlotModel builds the shared Bubble Tea model for slot selection
 // (bare `git-slot`, mount -i, shell without args).
 func (a *app) newInteractiveSlotModel(slots []slot.Slot, branches []string) tui.Model {
-	return tui.NewInteractiveModel(slots, branches, tui.IsNoColor(), a.wt.RecentLogs, a.cfg.TUILogLines(), a.cfg.TUILogFormat())
+	return tui.NewInteractiveModel(slots, branches, tui.IsNoColor())
 }
 
 // listBranchesForTUI returns local branch names for branch completion in the TUI, or nil on error.

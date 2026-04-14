@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `gsl` wrapper: set `GSL_FROM_WRAPPER=1` on captured `git-slot` invocations so `launch_shell = true` still prints the worktree path for `cd` (TUI/set paths). Slot shells strip this variable before `exec`.
 - Embedded AI skill (`git slot install-skill`): slot-scoped tasks now **require** terminal builds/tests/scripts to run via **`git slot exec`** (with anti-escape rules: no bare `npm` / `go` / `make` after `cd` alone); `cd` is clarified as for file paths, not a substitute for `exec`.
 - `cmd`: shared `loadActiveSlotContext`, `execArgumentSegment` (exec argv / `--help`), `exitIfNotSlotWorktree`, and `runExecExit`; shell/exec/which use the helpers.
 

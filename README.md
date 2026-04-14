@@ -83,7 +83,7 @@ git slot --version
 
 ### cd ラッパー (`gsl`)
 
-`gsl` コマンドを使うと、スロットへの装填・移動を一発で行えます。`git slot` は CLI ツールとして表示・管理を担当し、`gsl` は cd 付きの日常操作用ラッパーです。
+`gsl` コマンドを使うと、スロットへの装填・移動を一発で行えます。`git slot` は CLI ツールとして表示・管理を担当し、`gsl` は cd 付きの日常操作用ラッパーです。ラッパーは内部的に `GSL_FROM_WRAPPER=1` を付け、`launch_shell = true` でも **パスを標準出力して cd** できるようにします（スロットシェルにこの変数は引き継ぎません）。
 
 ```bash
 # Bash / Zsh — シェル設定ファイルに追加:
@@ -164,9 +164,11 @@ launch_shell = true
 ```
 
 ```bash
-# launch_shell=true なら set でもサブシェルが起動
+# launch_shell=true でも gsl は cd 用にパスだけ返す（サブシェルは起動しない）
 gsl set main-work feature/nice-ui
-# → サブシェル内で作業開始
+
+# 素の git slot では launch_shell のとおりサブシェルが起動
+git slot set main-work feature/nice-ui
 
 # スクリプト用途では --no-shell で抑制
 git slot set main-work feature/nice-ui --no-shell

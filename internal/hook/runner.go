@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/AquiTCD/git-slot/internal/config"
+	"github.com/AquiTCD/git-slot/internal/gslenv"
 )
 
 const DefaultTimeout = 30 * time.Second
@@ -129,7 +130,7 @@ func (r *Runner) handleRun(action config.HookAction, env HookEnv) error {
 	for k, v := range env.UserEnv {
 		hookEnvVars = append(hookEnvVars, k+"="+v)
 	}
-	cmd.Env = append(os.Environ(), hookEnvVars...)
+	cmd.Env = append(gslenv.StripFromOSEnviron(), hookEnvVars...)
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {

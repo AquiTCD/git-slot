@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/AquiTCD/git-slot/internal/config"
+	"github.com/AquiTCD/git-slot/internal/gslenv"
 	"github.com/AquiTCD/git-slot/internal/hook"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -52,7 +53,10 @@ func checkExecAllowedInSlotShell(explicitSlot bool, slotArg, resolvedSlotName st
 }
 
 func wantShell(cfg *config.Config, noShell bool) bool {
-	return cfg.LaunchShell != nil && *cfg.LaunchShell && !noShell
+	if noShell || gslenv.FromWrapper() {
+		return false
+	}
+	return cfg.LaunchShell != nil && *cfg.LaunchShell
 }
 
 func newHookContext(a *app, slotName, branch, action string, out io.Writer) (*hook.Runner, hook.HookEnv) {

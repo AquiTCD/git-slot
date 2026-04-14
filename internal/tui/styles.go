@@ -24,6 +24,11 @@ var (
 
 	StyleSelected lipgloss.Style
 	StyleCursor   lipgloss.Style
+
+	// Interactive TUI (fzf-like): divider line, left pointer bar, selected row background.
+	StyleFzfDivider lipgloss.Style
+	StyleFzfBar     lipgloss.Style
+	StyleFzfRowBG   lipgloss.Style
 )
 
 func init() {
@@ -46,6 +51,12 @@ func init() {
 
 	StyleSelected = renderer.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
 	StyleCursor = renderer.NewStyle().Foreground(lipgloss.Color("5"))
+
+	StyleFzfDivider = renderer.NewStyle().Foreground(lipgloss.Color("8"))
+	StyleFzfBar = renderer.NewStyle().
+		Background(lipgloss.Color("5")).
+		Foreground(lipgloss.Color("5"))
+	StyleFzfRowBG = renderer.NewStyle().Background(lipgloss.Color("237"))
 }
 
 func render(s lipgloss.Style, text string, noColor bool) string {
@@ -53,6 +64,14 @@ func render(s lipgloss.Style, text string, noColor bool) string {
 		return text
 	}
 	return s.Render(text)
+}
+
+// renderOnFzfRowBG renders text with the fzf selected-row background merged with s's
+// foreground (and other) attributes. Use for each highlighted head segment: plain
+// Style.Render resets SGR at segment boundaries and would otherwise drop the row bg
+// after the first styled chunk.
+func renderOnFzfRowBG(s lipgloss.Style, text string) string {
+	return StyleFzfRowBG.Inherit(s).Render(text)
 }
 
 func StateStyle(state string) lipgloss.Style {

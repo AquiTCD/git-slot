@@ -5,12 +5,61 @@ import (
 	"testing"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRenderSlotList_Empty(t *testing.T) {
 	result := RenderSlotList(nil, true)
 	assert.Equal(t, "No slots defined.", result)
+}
+
+func TestSlotLineHeadTailStrings_ActiveSplitsAfterBranch(t *testing.T) {
+	s := slot.Slot{
+		Name: "work", Icon: "🌱", State: slot.SlotActive, Branch: "feat/x",
+		HeadHash: "abc1234", DirtyCount: 0, HasUpstream: true, AheadCount: 0, BehindCount: 0,
+	}
+	head, tail := slotLineHeadTailStrings(s, 4, true, false)
+	assert.Contains(t, head, "feat/x")
+	assert.Contains(t, tail, "abc1234")
+	assert.NotContains(t, head, "abc1234")
+}
+
+func TestMaxSlotNameLen(t *testing.T) {
+	slots := []slot.Slot{{Name: "a"}, {Name: "longname"}}
+	assert.Equal(t, 8, maxSlotNameLen(slots))
+	assert.Equal(t, 0, maxSlotNameLen(nil))
+}
+
+func TestSlotLineHeadTailStrings_NoColorIgnoresFzfHeadRowBG(t *testing.T) {
+	s := slot.Slot{Name: "a", Icon: "🌱", State: slot.SlotEmpty}
+	withFlag, _ := slotLineHeadTailStrings(s, 4, true, true)
+	noFlag, _ := slotLineHeadTailStrings(s, 4, true, false)
+	assert.Equal(t, withFlag, noFlag)
+}
+
+func TestSlotLineHeadTailStrings_FzfRowBGSameVisibleText(t *testing.T) {
+	s := slot.Slot{
+		Name: "fire", Icon: "🔥", State: slot.SlotActive, Branch: "feature/x",
+		HeadHash: "abc", DirtyCount: 0, HasUpstream: true, AheadCount: 0, BehindCount: 0,
+	}
+	withBG, _ := slotLineHeadTailStrings(s, 4, false, true)
+	plain, _ := slotLineHeadTailStrings(s, 4, false, false)
+	assert.Equal(t, ansi.Strip(withBG), ansi.Strip(plain))
+}
+
+func TestRenderSlotFilterDivider_EndsWithCount(t *testing.T) {
+	line := RenderSlotFilterDivider(40, 2, 10, true)
+	assert.True(t, strings.HasSuffix(line, " 2/10"))
+	assert.GreaterOrEqual(t, strings.Count(line, "─"), 4)
+}
+
+func TestRenderInteractiveSlotLine_UnselectedMatchesListLine(t *testing.T) {
+	s := slot.Slot{Name: "a", Icon: "🌱", State: slot.SlotEmpty}
+	const nw = 4
+	interactive := RenderInteractiveSlotLine(s, nw, false, true)
+	listLine := renderSlotLine(s, nw, true)
+	assert.Equal(t, listLine, interactive)
 }
 
 func TestRenderSlotList_NoColor_AllEmpty(t *testing.T) {

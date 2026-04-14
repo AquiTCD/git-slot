@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/AquiTCD/git-slot/internal/gslenv"
 	"github.com/AquiTCD/git-slot/internal/slot"
 	"github.com/AquiTCD/git-slot/internal/slotenv"
 	"github.com/AquiTCD/git-slot/internal/tui"
@@ -76,6 +77,7 @@ func launchSlotShell(a *app, slotName string) error {
 
 	slotVars := slotenv.BuildSlotEnv(info, userEnv)
 	mergedEnv := slotenv.MergeEnvWithOS(os.Environ(), slotVars)
+	mergedEnv = gslenv.StripFromEnv(mergedEnv)
 
 	return execShell(st.Path, mergedEnv)
 }

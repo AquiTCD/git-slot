@@ -60,6 +60,9 @@ var wrapperCmd = &cobra.Command{
 	Long: `Generate a shell wrapper function "gsl" that calls git-slot and
 automatically cd's into the slot directory on success.
 
+The wrapper sets GSL_FROM_WRAPPER=1 for command-substitution calls so
+launch_shell does not start a sub-shell (which would break cd capture).
+
 To enable this, add the following to your shell config file:
 
 Bash / Zsh (~/.zshrc or ~/.bashrc):
@@ -93,15 +96,14 @@ func writeShWrapper(w io.Writer) error {
   local result
   # Force color output even when captured in a variable,
   # but only if NO_COLOR is not set.
+  # GSL_FROM_WRAPPER=1 tells git-slot to print a path for cd even when launch_shell is on.
   if [ -z "$NO_COLOR" ]; then
-    result=$(CLICOLOR_FORCE=1 command git-slot "$@" </dev/tty)
+    result=$(CLICOLOR_FORCE=1 GSL_FROM_WRAPPER=1 command git-slot "$@" </dev/tty)
   else
-    result=$(command git-slot "$@" </dev/tty)
+    result=$(GSL_FROM_WRAPPER=1 command git-slot "$@" </dev/tty)
   fi
   local rc=$?
   if [ $rc -eq 0 ]; then
-    # When launch_shell is enabled, git-slot launches a sub-shell
-    # instead of printing a path, so result will be empty — no cd.
     if [ -n "$result" ] && [ -d "$result" ]; then
       cd "$result" || return 1
     elif [ -n "$result" ]; then
@@ -123,15 +125,14 @@ func writeFishWrapper(w io.Writer) error {
     return $status
   end
   set -l result
+  # GSL_FROM_WRAPPER=1 tells git-slot to print a path for cd even when launch_shell is on.
   if not set -q NO_COLOR
-    set result (env CLICOLOR_FORCE=1 command git-slot $argv </dev/tty)
+    set result (env CLICOLOR_FORCE=1 GSL_FROM_WRAPPER=1 command git-slot $argv </dev/tty)
   else
-    set result (command git-slot $argv </dev/tty)
+    set result (env GSL_FROM_WRAPPER=1 command git-slot $argv </dev/tty)
   end
   set -l rc $status
   if test $rc -eq 0
-    # When launch_shell is enabled, git-slot launches a sub-shell
-    # instead of printing a path, so result will be empty — no cd.
     if test -n "$result"; and test -d "$result[1]"
       cd "$result[1]"
     else if test -n "$result"

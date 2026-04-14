@@ -1,12 +1,10 @@
 package tui
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/AquiTCD/git-slot/internal/slot"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,12 +17,8 @@ func testSlots() []slot.Slot {
 	}
 }
 
-var noopFetcher = func(path string, n int, format string) ([]string, error) {
-	return nil, nil
-}
-
 func newInteractiveTestModel(slots []slot.Slot, noColor bool) Model {
-	return NewInteractiveModel(slots, nil, noColor, noopFetcher, 5, "%h %s")
+	return NewInteractiveModel(slots, nil, noColor)
 }
 
 func sendKey(m tea.Model, key string) Model {
@@ -36,8 +30,6 @@ func sendSpecialKey(m tea.Model, key tea.KeyType) Model {
 	updated, _ := m.Update(tea.KeyMsg{Type: key})
 	return updated.(Model)
 }
-
-// --- Navigation Tests ---
 
 func TestNewInteractiveModel(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
@@ -106,18 +98,28 @@ func TestBranchInput_Esc_BackToSlotSelect(t *testing.T) {
 func TestView_SlotSelect(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	view := m.View()
-	assert.Contains(t, view, "Select a slot:")
+	assert.Contains(t, view, "type to filter")
+	assert.Contains(t, view, "3/3")
 	assert.Contains(t, view, "wood")
 	assert.Contains(t, view, "fire")
 	assert.Contains(t, view, "earth")
 	assert.Contains(t, view, "> ")
 }
 
+func TestView_SlotSelect_ActiveSlotShowsBranchLikeList(t *testing.T) {
+	m := newInteractiveTestModel(testSlots(), true)
+	m2 := sendSpecialKey(m, tea.KeyDown)
+	view := m2.View()
+	assert.Contains(t, view, "feature/x")
+}
+
 func TestView_BranchInput(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
 	m2 := sendSpecialKey(m, tea.KeyEnter)
 	view := m2.View()
-	assert.Contains(t, view, "Slot: 🌱 wood")
+	assert.Contains(t, view, "Slot:")
+	assert.Contains(t, view, "wood")
+	assert.Contains(t, view, "🌱")
 	assert.Contains(t, view, "Enter branch name")
 }
 
@@ -127,7 +129,20 @@ func TestView_WithColor(t *testing.T) {
 	assert.Contains(t, view, "wood")
 }
 
-// --- Tests with filter ---
+func TestRenderInteractiveSlotLine_SelectedPrefix(t *testing.T) {
+	s := testSlots()[1]
+	line := RenderInteractiveSlotLine(s, 4, true, true)
+	assert.Contains(t, line, ">")
+	assert.Contains(t, line, "fire")
+	assert.Contains(t, line, "feature/x")
+}
+
+func TestRenderInteractiveSlotLine_ColorSelectedUsesBarNotGreater(t *testing.T) {
+	s := testSlots()[1]
+	line := RenderInteractiveSlotLine(s, 4, true, false)
+	assert.NotContains(t, line, ">")
+	assert.Contains(t, line, "fire")
+}
 
 func TestFilter_ShowsFilterInput(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
@@ -183,108 +198,10 @@ func TestFilter_CursorClamped(t *testing.T) {
 	assert.Len(t, m.filteredSlots, 1)
 }
 
-// --- Right pane / log preview tests ---
-
-// ENH-P2-T1: empty slot => right pane shows "(empty)"
-func TestRightPane_EmptySlot_ShowsEmptyLabel(t *testing.T) {
+func TestCursorMove_NoBackgroundFetch(t *testing.T) {
 	m := newInteractiveTestModel(testSlots(), true)
-	// cursor starts at 0 = wood (empty)
-	rp := m.buildRightPane(80, 81)
-	assert.Contains(t, rp, "(empty)")
-	first := strings.Split(rp, "\n")[0]
-	assert.Equal(t, 81, ansi.StringWidth(first))
-}
-
-// ENH-P2-T2: active slot with loaded logs => right pane shows those lines
-func TestRightPane_ActiveSlot_ShowsLogs(t *testing.T) {
-	logs := []string{"abc1234 feat: add auth", "def5678 fix: null pointer"}
-	fetcher := func(path string, n int, format string) ([]string, error) {
-		return logs, nil
-	}
-	m := NewInteractiveModel(testSlots(), nil, true, fetcher, 5, "%h %s")
-	m.cursor = 1 // fire (active)
-	m.rightPane = logs
-	rp := m.buildRightPane(80, 81)
-	assert.Contains(t, rp, "abc1234 feat: add auth")
-	assert.Contains(t, rp, "def5678 fix: null pointer")
-}
-
-// ENH-P2-T3: logLoadedMsg updates rightPane when slotPath matches current cursor
-func TestLogLoadedMsg_UpdatesRightPane(t *testing.T) {
-	m := newInteractiveTestModel(testSlots(), true)
-	m.cursor = 1 // fire, Path="/slots/fire"
-	updated, _ := m.Update(logLoadedMsg{
-		slotPath: "/slots/fire",
-		lines:    []string{"abc feat: x", "def fix: y"},
-	})
-	m2 := updated.(Model)
-	assert.Equal(t, []string{"abc feat: x", "def fix: y"}, m2.rightPane)
-}
-
-// ENH-P2-T3b: stale logLoadedMsg (wrong slotPath) does NOT update rightPane
-func TestLogLoadedMsg_StaleMsg_DoesNotUpdateRightPane(t *testing.T) {
-	m := newInteractiveTestModel(testSlots(), true)
-	m.cursor = 1 // fire, Path="/slots/fire"
-	m.rightPane = []string{"existing log"}
-	updated, _ := m.Update(logLoadedMsg{
-		slotPath: "/slots/wood", // stale: cursor has moved away
-		lines:    []string{"stale log"},
-	})
-	m2 := updated.(Model)
-	assert.Equal(t, []string{"existing log"}, m2.rightPane, "stale msg should not overwrite rightPane")
-}
-
-// ENH-P2-T4: active slot with no logs yet => "Loading..."
-func TestRightPane_ActiveSlot_LoadingState(t *testing.T) {
-	m := newInteractiveTestModel(testSlots(), true)
-	m.cursor = 1 // fire (active), rightPane is nil
-	rp := m.buildRightPane(80, 81)
-	assert.Contains(t, rp, "Loading...")
-}
-
-// ENH-P2-T5: cursor move triggers non-nil log fetch cmd
-func TestCursorMove_TriggersLogFetch(t *testing.T) {
-	m := newInteractiveTestModel(testSlots(), true)
-	// cursor moves to 1 (fire = active) => fetchLogsForCurrent should return non-nil cmd
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	assert.NotNil(t, cmd, "moving cursor to active slot should return a log-fetch cmd")
-}
-
-// ENH-P2-T6: no fetcher => fetchLogsForCurrent returns nil
-func TestFetchLogsForCurrent_NoFetcher_ReturnsNil(t *testing.T) {
-	m := NewInteractiveModel(testSlots(), nil, true, nil, 5, "%h %s")
-	cmd := m.fetchLogsForCurrent()
 	assert.Nil(t, cmd)
-}
-
-// Long log lines are truncated to one row (ellipsis) at the given content width.
-func TestBuildRightPane_TruncatesLongLogLines(t *testing.T) {
-	m := newInteractiveTestModel(testSlots(), true)
-	m.cursor = 1
-	m.rightPane = []string{"2026-01-01 " + strings.Repeat("x", 200)}
-	rp := m.buildRightPane(24, 25)
-	lines := strings.Split(rp, "\n")
-	require.GreaterOrEqual(t, len(lines), 3)
-	logLine := lines[len(lines)-1]
-	assert.Equal(t, 25, ansi.StringWidth(logLine), "each right-pane row must match column width for layout")
-	assert.Contains(t, logLine, "...")
-}
-
-func TestTruncatePaneLine_MaxWidth(t *testing.T) {
-	long := strings.Repeat("a", 200)
-	out := truncatePaneLine(long, 12)
-	assert.LessOrEqual(t, ansi.StringWidth(out), 12)
-	assert.Contains(t, out, "...")
-}
-
-// ENH-P2-T7: view contains right pane content in split layout
-func TestView_SplitLayout_ContainsRightPane(t *testing.T) {
-	m := newInteractiveTestModel(testSlots(), true)
-	m.cursor = 1
-	m.rightPane = []string{"abc feat: add x"}
-	view := m.View()
-	assert.Contains(t, view, "abc feat: add x")
-	assert.Contains(t, view, "Select a slot:")
 }
 
 func TestWindowSizeMsg_SyncsFilterInputWidth(t *testing.T) {
@@ -294,4 +211,17 @@ func TestWindowSizeMsg_SyncsFilterInputWidth(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, 120, m2.width)
 	assert.Equal(t, filterFieldWidth(120), m2.filterInput.Width)
+}
+
+func TestSanitizeTextInputFirstLine_DropsSecondLine(t *testing.T) {
+	assert.Equal(t, "foo", sanitizeTextInputFirstLine("foo\nbar"))
+	assert.Equal(t, "foo", sanitizeTextInputFirstLine("foo\r\nbar"))
+}
+
+func TestSanitizeTextInputFirstLine_CRWithoutLF(t *testing.T) {
+	assert.Equal(t, "a b", sanitizeTextInputFirstLine("a\rb"))
+}
+
+func TestSanitizeTextInputFirstLine_FirstLineOnly(t *testing.T) {
+	assert.Equal(t, "x", sanitizeTextInputFirstLine("x\ny"))
 }
