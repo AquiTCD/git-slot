@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/AquiTCD/git-slot/internal/config"
+	"github.com/AquiTCD/git-slot/internal/gslenv"
 	"github.com/AquiTCD/git-slot/internal/hook"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -52,31 +52,8 @@ func checkExecAllowedInSlotShell(explicitSlot bool, slotArg, resolvedSlotName st
 	return nil
 }
 
-// envGslFromWrapper is set to "1" by the gsl shell wrapper for invocations that use
-// command substitution and then cd. It suppresses launch_shell so git-slot prints a
-// path instead of exec'ing a slot shell (which would not work under $() anyway).
-const envGslFromWrapper = "GSL_FROM_WRAPPER"
-
-func isFromGslWrapper() bool {
-	return os.Getenv(envGslFromWrapper) == "1"
-}
-
-// stripWrapperExclusiveEnv removes internal-only variables set by the gsl wrapper so
-// an interactive slot shell does not inherit them after syscall.Exec.
-func stripWrapperExclusiveEnv(env []string) []string {
-	prefix := envGslFromWrapper + "="
-	out := make([]string, 0, len(env))
-	for _, e := range env {
-		if strings.HasPrefix(e, prefix) {
-			continue
-		}
-		out = append(out, e)
-	}
-	return out
-}
-
 func wantShell(cfg *config.Config, noShell bool) bool {
-	if noShell || isFromGslWrapper() {
+	if noShell || gslenv.FromWrapper() {
 		return false
 	}
 	return cfg.LaunchShell != nil && *cfg.LaunchShell

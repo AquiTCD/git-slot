@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -293,13 +292,4 @@ func TestHandleCopy_ReplacesExisting(t *testing.T) {
 	data, err := os.ReadFile(dest)
 	require.NoError(t, err)
 	assert.Equal(t, "new", string(data))
-}
-
-func TestOsEnvironWithoutGslWrapper(t *testing.T) {
-	t.Setenv("GSL_FROM_WRAPPER", "1")
-	t.Setenv("HOOK_TEST_KEEP", "yes")
-	got := osEnvironWithoutGslWrapper()
-	joined := strings.Join(got, "\n")
-	assert.NotContains(t, joined, "GSL_FROM_WRAPPER=")
-	assert.Contains(t, joined, "HOOK_TEST_KEEP=yes")
 }

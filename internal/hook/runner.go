@@ -12,24 +12,10 @@ import (
 	"time"
 
 	"github.com/AquiTCD/git-slot/internal/config"
+	"github.com/AquiTCD/git-slot/internal/gslenv"
 )
 
 const DefaultTimeout = 30 * time.Second
-
-// gslWrapperEnvPrefix matches cmd.envGslFromWrapper; hooks should not inherit it.
-const gslWrapperEnvPrefix = "GSL_FROM_WRAPPER="
-
-func osEnvironWithoutGslWrapper() []string {
-	src := os.Environ()
-	out := make([]string, 0, len(src))
-	for _, e := range src {
-		if strings.HasPrefix(e, gslWrapperEnvPrefix) {
-			continue
-		}
-		out = append(out, e)
-	}
-	return out
-}
 
 const (
 	HookTypeLink = "link"
@@ -144,7 +130,7 @@ func (r *Runner) handleRun(action config.HookAction, env HookEnv) error {
 	for k, v := range env.UserEnv {
 		hookEnvVars = append(hookEnvVars, k+"="+v)
 	}
-	cmd.Env = append(osEnvironWithoutGslWrapper(), hookEnvVars...)
+	cmd.Env = append(gslenv.StripFromOSEnviron(), hookEnvVars...)
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
